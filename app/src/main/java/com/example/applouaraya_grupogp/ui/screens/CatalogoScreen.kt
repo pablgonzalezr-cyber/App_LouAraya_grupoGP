@@ -1,128 +1,144 @@
 package com.example.applouaraya_grupogp.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.applouaraya_grupogp.model.Producto
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.applouaraya_grupogp.repository.ProductosDemo
-import java.text.NumberFormat
-import java.util.Locale
+import com.example.applouaraya_grupogp.ui.components.ProductoCard
+import com.example.applouaraya_grupogp.viewmodel.CatalogoViewModel
+import com.example.applouaraya_grupogp.viewmodel.FavoritosViewModel
 
+// Conserva onVolver; usuarioId tiene valor por defecto para que compile
+// con el AppNavigation.kt que ya existe, sin modificarlo en esta rama.
 @Composable
-fun CatalogoScreen(onVolver: () -> Unit) {
+fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null) {
+    val catalogoVm: CatalogoViewModel = viewModel()
+    val favoritosVm: FavoritosViewModel = viewModel()
+    val estado by catalogoVm.estado.collectAsState()
+    val favoritos by favoritosVm.ids.collectAsState()
+    val puedeGuardar = usuarioId != null && usuarioId > 0L
 
-    var categoria by rememberSaveable {
-        mutableStateOf("Todos")
+    LaunchedEffect(usuarioId) { favoritosVm.seleccionarUsuario(usuarioId) }
+    var vista by rememberSaveable { mutableStateOf("catalogo") }
+    var detalleId by rememberSaveable { mutableIntStateOf(-1) }
+
+    BackHandler(enabled = vista != "catalogo") {
+        vista = "catalogo"
     }
 
-    var seleccionado by remember {
-        mutableStateOf<Producto?>(null)
-    }
-
-    val categorias = listOf(
-        "Todos", "Interiores", "Matrimonios", "Festivales"
-    )
-
-    val productos = ProductosDemo.productos.filter {
-        categoria == "Todos" || it.categoria == categoria
-    }
-
-    val formato = NumberFormat.getIntegerInstance(
-        Locale("es", "CL")
-    )
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F1E8))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            TextButton(onClick = onVolver) {
-                Text("← Volver al inicio")
-            }
-
-            Text(
-                "Catálogo artesanal",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color(0xFF51362B)
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            Text("Explora nuestros diseños de macramé.")
-
-            categorias.forEach { opcion ->
-                FilterChip(
-                    selected = categoria == opcion,
-                    onClick = { categoria = opcion },
-                    label = { Text(opcion) }
+    when (vista) {
+        "detalle" -> {
+            val producto = ProductosDemo.productos.firstOrNull { it.id == detalleId }
+            if (producto == null) {
+                LaunchedEffect(detalleId) { vista = "catalogo" }
+            } else {
+                DetalleProductoScreen(
+                    producto = producto,
+                    esFavorito = producto.id in favoritos,
+                    permitirFavorito = puedeGuardar,
+                    onVolver = { vista = "catalogo" },
+                    onFavorito = { favoritosVm.alternar(usuarioId, producto.id) }
                 )
             }
         }
-
-        items(productos, key = { it.id }) { producto ->
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE9D8C6)
-                ),
-                modifier = Modifier.fillMaxWidth()
+        "favoritos" -> FavoritosScreen(
+            productos = ProductosDemo.productos,
+            idsFavoritos = favoritos,
+            onVolver = { vista = "catalogo" },
+            onAbrir = { id -> detalleId = id; vista = "detalle" },
+            onQuitar = { id -> favoritosVm.alternar(usuarioId, id) }
+        )
+        else -> {
+            Column(
+                modifier = Modifier.fillMaxSize()
+                    .background(Color(0xFFF7F1E8))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        producto.nombre,
-                        style = MaterialTheme.typography.titleLarge
+                    TextButton(onClick = onVolver) { Text("← Inicio") }
+                    TextButton(
+                        onClick = { vista = "favoritos" },
+                        enabled = puedeGuardar
+                    ) { Text("♥ Favoritos (${favoritos.size})") }
+                }
+                Text("Catálogo de macramé", style = MaterialTheme.typography.headlineMedium,
+                    color = Color(0xFF51362B))
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = estado.consulta,
+                    onValueChange = catalogoVm::cambiarConsulta,
+                    label = { Text("Buscar por nombre o material") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(listOf("Todos", "Interiores", "Matrimonios", "Festivales")) { cat ->
+                        FilterChip(
+                            selected = estado.categoria == cat,
+                            onClick = { catalogoVm.cambiarCategoria(cat) },
+                            label = { Text(cat) }
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = estado.soloDisponibles,
+                        onCheckedChange = catalogoVm::cambiarDisponibles
                     )
-
-                    Text("Categoría: ${producto.categoria}")
-                    Text("Material: ${producto.material}")
-
+                    Text("Solo disponibles")
+                }
+                FilterChip(
+                    selected = estado.ordenarPorPrecio,
+                    onClick = { catalogoVm.cambiarOrdenPrecio(!estado.ordenarPorPrecio) },
+                    label = { Text("Ordenar: precio menor primero") }
+                )
+                if (!puedeGuardar) {
                     Text(
-                        "$${formato.format(producto.precio)}",
-                        style = MaterialTheme.typography.titleMedium
+                        "Favoritos pendientes de vincular con el usuario activo. " +
+                                "El encargado de integración debe pasar usuarioId desde AppNavigation.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF985B42)
                     )
-
-                    Button(
-                        onClick = { seleccionado = producto }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("${estado.productos.size} diseños encontrados")
+                Spacer(Modifier.height(10.dp))
+                if (estado.productos.isEmpty()) {
+                    Text("No encontramos productos con esos filtros.")
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp)
                     ) {
-                        Text("Ver detalles")
+                        items(estado.productos, key = { it.id }) { producto ->
+                            ProductoCard(
+                                producto = producto,
+                                esFavorito = producto.id in favoritos,
+                                permitirFavorito = puedeGuardar,
+                                onVerDetalle = { detalleId = producto.id; vista = "detalle" },
+                                onFavorito = { favoritosVm.alternar(usuarioId, producto.id) }
+                            )
+                        }
                     }
                 }
             }
         }
     }
-
-    seleccionado?.let { producto ->
-        AlertDialog(
-            onDismissRequest = { seleccionado = null },
-            title = { Text(producto.nombre) },
-            text = {
-                Text(
-                    "${producto.descripcion}\n\n" +
-                            "Material: ${producto.material}\n" +
-                            "Precio referencial: " +
-                            "$${formato.format(producto.precio)}"
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { seleccionado = null }
-                ) {
-                    Text("Cerrar")
-                }
-            }
-        )
-    }
 }
-
