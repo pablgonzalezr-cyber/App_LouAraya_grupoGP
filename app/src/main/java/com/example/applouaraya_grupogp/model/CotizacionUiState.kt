@@ -12,6 +12,7 @@ data class CotizacionFormulario(
 )
 
 data class CotizacionUiState(
+    val productosReferencia: List<Producto> = emptyList(),
     val formulario: CotizacionFormulario = CotizacionFormulario(),
     val errores: Map<String, String> = emptyMap(),
     val guardando: Boolean = false,

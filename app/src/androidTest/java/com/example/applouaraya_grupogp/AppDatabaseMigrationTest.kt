@@ -42,14 +42,14 @@ class AppDatabaseMigrationTest {
                     assertEquals(hashTexto, cursor.getString(2))
                 }
             }
-            val db = Room.databaseBuilder(contexto, AppDatabase::class.java, nombre).addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
+            val db = Room.databaseBuilder(contexto, AppDatabase::class.java, nombre).addMigrations(*AppDatabase.MIGRACIONES).build()
             val id = try {
                 val usuario = UsuarioRepository(db.usuarioDao()).iniciarSesion("anterior@example.test", password)
                 assertNotNull(usuario)
                 assertEquals(7L, usuario!!.id)
                 CotizacionRepository(db.cotizacionDao()).guardar(usuario.id, "token-migracion", CotizacionFormulario("Tapiz para habitación", "Interiores", "Algodón", "45", "70", "1"))
             } finally { db.close() }
-            val reabierta = Room.databaseBuilder(contexto, AppDatabase::class.java, nombre).addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
+            val reabierta = Room.databaseBuilder(contexto, AppDatabase::class.java, nombre).addMigrations(*AppDatabase.MIGRACIONES).build()
             try {
                 assertEquals("PENDIENTE", reabierta.cotizacionDao().observarDetalle(7, id).first()!!.estado)
                 assertEquals(1, reabierta.cotizacionDao().observarPropias(7).first().size)

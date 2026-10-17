@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.applouaraya_grupogp.repository.ProductosDemo
 import com.example.applouaraya_grupogp.validation.CotizacionValidator
 import com.example.applouaraya_grupogp.viewmodel.CotizacionViewModel
 
@@ -35,7 +34,7 @@ fun CotizacionScreen(usuarioId: Long, onVolver: () -> Unit, onGuardada: (Long) -
         CampoCotizacion("Largo / alto (cm)", f.largo, estado.errores["largo"], !estado.guardando, KeyboardType.Decimal) { vm.cambiar(f.copy(largo = it)) }
         CampoCotizacion("Cantidad", f.cantidad, estado.errores["cantidad"], !estado.guardando, KeyboardType.Number) { vm.cambiar(f.copy(cantidad = it)) }
         CampoCotizacion("Fecha requerida (opcional, dd/mm/aaaa)", f.fecha, estado.errores["fecha"], !estado.guardando) { vm.cambiar(f.copy(fecha = it)) }
-        SelectorCotizacion("Producto de referencia (opcional)", listOf("" to "Sin referencia") + ProductosDemo.productos.map { it.id.toString() to it.nombre }, f.productoId?.toString() ?: "", !estado.guardando) { vm.cambiar(f.copy(productoId = it.toIntOrNull())) }
+        SelectorCotizacion("Producto de referencia (opcional)", listOf("" to "Sin referencia") + estado.productosReferencia.map { it.id.toString() to it.nombre }, f.productoId?.toString() ?: "", !estado.guardando) { vm.cambiar(f.copy(productoId = it.toIntOrNull())) }
         estado.errores["producto"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(onClick = { vm.guardar(usuarioId) }, enabled = !estado.guardando && estado.guardadaId == null,

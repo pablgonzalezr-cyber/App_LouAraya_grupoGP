@@ -30,7 +30,7 @@ private fun AdminMarco(titulo: String, volver: () -> Unit, mostrarVolver: Boolea
 }
 
 @Composable
-fun AdminDashboardScreen(vm: AdminCotizacionesViewModel, onSolicitudes: () -> Unit, onCerrarSesion: () -> Unit, onPerfil: () -> Unit) {
+fun AdminDashboardScreen(vm: AdminCotizacionesViewModel, onSolicitudes: () -> Unit, onCerrarSesion: () -> Unit, onPerfil: () -> Unit, onProductos: () -> Unit, onContenido: () -> Unit) {
     val estado by vm.estado.collectAsState()
     LaunchedEffect(vm) { vm.cargar() }
     AdminMarco("Administración Lou Araya", onCerrarSesion, mostrarVolver = false, desplazable = true) {
@@ -40,6 +40,8 @@ fun AdminDashboardScreen(vm: AdminCotizacionesViewModel, onSolicitudes: () -> Un
         EstadoCotizacion.entries.forEach { e -> Text("${e.name}: ${estado.solicitudes.count { it.estado == e.name }}") }
         Button(onClick = onSolicitudes, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA65E43))) { Text("Gestionar solicitudes") }
         OutlinedButton(onClick = onPerfil) { Text("Perfil y configuración") }
+        OutlinedButton(onClick = onProductos) { Text("Administrar productos") }
+        OutlinedButton(onClick = onContenido) { Text("Colecciones y campañas") }
         OutlinedButton(onClick = onCerrarSesion) { Text("Cerrar sesión") }
     }
 }

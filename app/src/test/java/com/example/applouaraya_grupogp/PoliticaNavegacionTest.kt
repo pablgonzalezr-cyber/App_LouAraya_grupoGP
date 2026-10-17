@@ -5,8 +5,8 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PoliticaNavegacionTest {
-    private val clientes = listOf("dashboard", "catalogo", "favoritos", "cotizacion", "solicitudes", "solicitud/{id}")
-    private val admins = listOf("admin", "admin/solicitudes", "admin/solicitud/{id}")
+    private val clientes = listOf("dashboard", "catalogo", "favoritos", "cotizacion", "solicitudes", "solicitud/{id}", "novedades", "producto/{id}")
+    private val admins = listOf("admin", "admin/solicitudes", "admin/solicitud/{id}", "admin/productos", "admin/contenido")
     @Test fun ningunaRutaPrivadaAdmiteSesionAusenteOInvalida() {
         for (ruta in clientes + admins + "perfil") for (id in listOf(null, 0L, -1L)) for (rol in listOf("CLIENTE", "ADMINISTRADOR")) {
             assertFalse(Politica.permite(ruta, id, rol))

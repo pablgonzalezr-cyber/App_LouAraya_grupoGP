@@ -19,7 +19,7 @@ import com.example.applouaraya_grupogp.ui.screens.*
 
 @Composable
 fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: PreferenciasRepository? = null,
-    controlador: NavHostController = rememberNavController()) {
+    controlador: NavHostController = rememberNavController(), favoritosPrueba: FavoritosRepository? = null) {
     val contexto = LocalContext.current.applicationContext
     val db = remember(contexto, basePrueba) { basePrueba ?: AppDatabase.obtener(contexto) }
     val nav = controlador
@@ -28,6 +28,8 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
         initializer { SesionViewModel(contexto as Application, UsuarioRepository(db.usuarioDao())) }
     } }
     val sesionVm: SesionViewModel = viewModel(factory = sesionFactory)
+    val productosRepo = remember(db, sesionVm) { ProductosRepository(db) { sesionVm.estado.value.usuarioId } }
+    val contenidoRepo = remember(db, productosRepo) { ContenidoRepository(db, productosRepo) }
     val sesion by sesionVm.estado.collectAsState()
     val configFactory = remember(contexto, preferenciasPrueba, sesionVm) { viewModelFactory {
         initializer { ConfiguracionViewModel(preferenciasPrueba ?: PreferenciasRepository(contexto.getSharedPreferences("lou_preferencias", Context.MODE_PRIVATE)), sesionVm.estado) }
@@ -72,7 +74,7 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
         composable("dashboard") { RutaPrivada("dashboard", sesion) {
             DashboardScreen(sesion.nombre, onCatalogo = { abrir("catalogo") }, onCerrarSesion = { pedirSalida("bienvenida") },
                 onCotizacion = { abrir("cotizacion") }, onHistorial = { abrir("solicitudes") },
-                onFavoritos = { abrir("favoritos") }, onPerfil = { abrir("perfil") })
+                onFavoritos = { abrir("favoritos") }, onPerfil = { abrir("perfil") }, onNovedades = { abrir("novedades") })
         } }
         composable("perfil") { RutaPrivada("perfil", sesion) {
             val factory = remember(db, sesionVm) { viewModelFactory {
@@ -82,8 +84,27 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
             PerfilScreen(vm, config.preferencias, config.guardando, config.error, configVm::guardar,
                 onVolver = { nav.popBackStack() }, onCerrarSesion = { pedirSalida("bienvenida") }, onCambiarUsuario = { pedirSalida("login") })
         } }
-        composable("catalogo") { RutaPrivada("catalogo", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id) } }
-        composable("favoritos") { RutaPrivada("favoritos", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, abrirFavoritos = true) } }
+        composable("catalogo") { RutaPrivada("catalogo", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
+        composable("favoritos") { RutaPrivada("favoritos", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, abrirFavoritos = true, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
+        composable("admin/productos") { RutaPrivada("admin/productos", sesion) {
+            val factory = remember(productosRepo) { viewModelFactory { initializer { AdminProductosViewModel(productosRepo) } } }
+            val vm: AdminProductosViewModel = viewModel(factory = factory)
+            AdminProductosScreen(vm, onVolver = { nav.popBackStack() })
+        } }
+        composable("admin/contenido") { RutaPrivada("admin/contenido", sesion) {
+            val factory = remember(contenidoRepo) { viewModelFactory { initializer { AdminContenidoViewModel(contenidoRepo) } } }
+            val vm: AdminContenidoViewModel = viewModel(factory = factory)
+            AdminContenidoScreen(vm, onVolver = { nav.popBackStack() })
+        } }
+        composable("novedades") { RutaPrivada("novedades", sesion) {
+            val factory = remember(contenidoRepo) { viewModelFactory { initializer { NovedadesViewModel(contenidoRepo) } } }
+            val vm: NovedadesViewModel = viewModel(factory = factory)
+            NovedadesScreen(vm, onVolver = { nav.popBackStack() }, onProducto = { abrir("producto/$it") })
+        } }
+        composable("producto/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
+            RutaPrivada("producto/{id}", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id,
+                repositorio = productosRepo, productoInicial = e.arguments?.getInt("id"), repositorioFavoritos = favoritosPrueba) }
+        }
         composable("cotizacion") { RutaPrivada("cotizacion", sesion) { id ->
             CotizacionScreen(id, onVolver = { nav.popBackStack() }, onGuardada = { solicitudId ->
                 nav.navigate("solicitudes") { popUpTo("cotizacion") { inclusive = true }; launchSingleTop = true }
@@ -98,7 +119,8 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
         }
         composable("admin") { RutaPrivada("admin", sesion) {
             AdminConPermiso(db, sesionVm) { vm -> AdminDashboardScreen(vm, onSolicitudes = { abrir("admin/solicitudes") },
-                onCerrarSesion = { pedirSalida("bienvenida") }, onPerfil = { abrir("perfil") }) }
+                onCerrarSesion = { pedirSalida("bienvenida") }, onPerfil = { abrir("perfil") }, onProductos = { abrir("admin/productos") },
+                onContenido = { abrir("admin/contenido") }) }
         } }
         composable("admin/solicitudes") { RutaPrivada("admin/solicitudes", sesion) {
             AdminConPermiso(db, sesionVm) { vm -> AdminSolicitudesScreen(vm, onVolver = { nav.popBackStack() }, onAbrir = { abrir("admin/solicitud/$it") }) }

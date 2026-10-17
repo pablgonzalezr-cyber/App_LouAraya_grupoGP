@@ -100,7 +100,7 @@ class NavegacionPerfilTest {
 
         // Acceso directo con la sesión ya cerrada: debe rechazarse cada destino,
         // sin montar sus pantallas ni recuperar una sesión anterior.
-        listOf("perfil", "cotizacion", "solicitudes", "solicitud/1", "admin", "admin/solicitudes", "admin/solicitud/1").forEach { ruta ->
+        listOf("perfil", "cotizacion", "solicitudes", "solicitud/1", "admin", "admin/solicitudes", "admin/solicitud/1", "admin/productos", "admin/contenido", "novedades", "producto/1").forEach { ruta ->
             compose.runOnUiThread { nav.navigate(ruta) }
             esperar("Iniciar sesión")
             compose.onNodeWithText("Iniciar sesión").assertIsDisplayed()
@@ -131,6 +131,7 @@ class NavegacionPerfilTest {
     private fun comprobarAusenciaDePantallasPrivadas() {
         listOf("Mi perfil", "Perfil y configuración", "Cotización personalizada", "Mis solicitudes",
             "Detalle de solicitud", "Administración Lou Araya", "Todas las solicitudes", "Gestionar solicitud #1",
+            "Administrar productos", "Administrar colecciones", "Colecciones y campañas",
             "¡Bienvenido, Cliente UI!").forEach { texto -> compose.onNodeWithText(texto).assertDoesNotExist() }
     }
 }

@@ -14,7 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.applouaraya_grupogp.repository.ProductosDemo
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.ui.platform.LocalContext
+import com.example.applouaraya_grupogp.data.AppDatabase
+import com.example.applouaraya_grupogp.repository.ProductosRepository
+import com.example.applouaraya_grupogp.repository.FavoritosRepository
+import com.example.applouaraya_grupogp.data.FavoritosDatabase
+import android.app.Application
 import com.example.applouaraya_grupogp.ui.components.ProductoCard
 import com.example.applouaraya_grupogp.viewmodel.CatalogoViewModel
 import com.example.applouaraya_grupogp.viewmodel.FavoritosViewModel
@@ -22,16 +29,23 @@ import com.example.applouaraya_grupogp.viewmodel.FavoritosViewModel
 // Conserva onVolver; usuarioId tiene valor por defecto para que compile
 // con el AppNavigation.kt que ya existe, sin modificarlo en esta rama.
 @Composable
-fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos: Boolean = false) {
-    val catalogoVm: CatalogoViewModel = viewModel()
-    val favoritosVm: FavoritosViewModel = viewModel()
+fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos: Boolean = false,
+    repositorio: ProductosRepository? = null, productoInicial: Int? = null, repositorioFavoritos: FavoritosRepository? = null) {
+    val contexto = LocalContext.current.applicationContext
+    val repo = remember(contexto, repositorio) { repositorio ?: ProductosRepository(AppDatabase.obtener(contexto)) }
+    val factory = remember(repo) { viewModelFactory { initializer { CatalogoViewModel(repo) } } }
+    val catalogoVm: CatalogoViewModel = viewModel(factory = factory)
+    val favoritosFactory = remember(contexto, repositorioFavoritos) { viewModelFactory {
+        initializer { FavoritosViewModel(contexto as Application, repositorioFavoritos ?: FavoritosRepository(FavoritosDatabase.obtener(contexto).favoritoDao())) }
+    } }
+    val favoritosVm: FavoritosViewModel = viewModel(factory = favoritosFactory)
     val estado by catalogoVm.estado.collectAsState()
     val favoritos by favoritosVm.ids.collectAsState()
     val puedeGuardar = usuarioId != null && usuarioId > 0L
 
     LaunchedEffect(usuarioId) { favoritosVm.seleccionarUsuario(usuarioId) }
-    var vista by rememberSaveable { mutableStateOf(if (abrirFavoritos) "favoritos" else "catalogo") }
-    var detalleId by rememberSaveable { mutableIntStateOf(-1) }
+    var vista by rememberSaveable { mutableStateOf(if (productoInicial != null) "detalle" else if (abrirFavoritos) "favoritos" else "catalogo") }
+    var detalleId by rememberSaveable { mutableIntStateOf(productoInicial ?: -1) }
 
     BackHandler(enabled = vista != "catalogo") {
         vista = "catalogo"
@@ -39,9 +53,9 @@ fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos
 
     when (vista) {
         "detalle" -> {
-            val producto = ProductosDemo.productos.firstOrNull { it.id == detalleId }
+            val producto = estado.todos.firstOrNull { it.id == detalleId }
             if (producto == null) {
-                LaunchedEffect(detalleId) { vista = "catalogo" }
+                if (!estado.cargando) LaunchedEffect(detalleId) { vista = "catalogo" }
             } else {
                 DetalleProductoScreen(
                     producto = producto,
@@ -53,7 +67,7 @@ fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos
             }
         }
         "favoritos" -> FavoritosScreen(
-            productos = ProductosDemo.productos,
+            productos = estado.todos,
             idsFavoritos = favoritos,
             onVolver = { vista = "catalogo" },
             onAbrir = { id -> detalleId = id; vista = "detalle" },
@@ -88,7 +102,7 @@ fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos
                 )
                 Spacer(Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("Todos", "Interiores", "Matrimonios", "Festivales")) { cat ->
+                    items(listOf("Todos") + (listOf("Interiores", "Matrimonios", "Festivales", "Otro") + estado.todos.map { it.categoria }).distinct()) { cat ->
                         FilterChip(
                             selected = estado.categoria == cat,
                             onClick = { catalogoVm.cambiarCategoria(cat) },
@@ -117,6 +131,8 @@ fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos
                     )
                 }
                 Spacer(Modifier.height(8.dp))
+                if (estado.cargando) CircularProgressIndicator()
+                estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = catalogoVm::cargar) { Text("Reintentar") } }
                 Text("${estado.productos.size} diseños encontrados")
                 Spacer(Modifier.height(10.dp))
                 if (estado.productos.isEmpty()) {
