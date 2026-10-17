@@ -100,7 +100,7 @@ class NavegacionPerfilTest {
 
         // Acceso directo con la sesión ya cerrada: debe rechazarse cada destino,
         // sin montar sus pantallas ni recuperar una sesión anterior.
-        listOf("perfil", "cotizacion", "solicitudes", "solicitud/1", "admin", "admin/solicitudes", "admin/solicitud/1", "admin/productos", "admin/contenido", "novedades", "producto/1").forEach { ruta ->
+        listOf("perfil", "cotizacion", "solicitudes", "solicitud/1", "admin", "admin/solicitudes", "admin/solicitud/1", "admin/productos", "admin/contenido", "novedades", "producto/1", "escaner", "qr-demo", "mapa").forEach { ruta ->
             compose.runOnUiThread { nav.navigate(ruta) }
             esperar("Iniciar sesión")
             compose.onNodeWithText("Iniciar sesión").assertIsDisplayed()

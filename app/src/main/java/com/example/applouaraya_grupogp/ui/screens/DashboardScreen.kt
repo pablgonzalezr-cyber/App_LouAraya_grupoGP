@@ -19,7 +19,9 @@ fun DashboardScreen(
     onHistorial: () -> Unit,
     onFavoritos: () -> Unit,
     onPerfil: () -> Unit,
-    onNovedades: () -> Unit
+    onNovedades: () -> Unit,
+    onEscaner: () -> Unit,
+    onMapa: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -84,6 +86,8 @@ fun DashboardScreen(
         OutlinedButton(onClick = onFavoritos, modifier = Modifier.fillMaxWidth()) { Text("Mis favoritos") }
         OutlinedButton(onClick = onPerfil, modifier = Modifier.fillMaxWidth()) { Text("Perfil y configuración") }
         OutlinedButton(onClick = onNovedades, modifier = Modifier.fillMaxWidth()) { Text("Colecciones y campañas") }
+        OutlinedButton(onClick = onEscaner, modifier = Modifier.fillMaxWidth()) { Text("Escanear QR") }
+        OutlinedButton(onClick = onMapa, modifier = Modifier.fillMaxWidth()) { Text("Mapa de ferias y showrooms") }
 
         OutlinedButton(
             onClick = onCerrarSesion,

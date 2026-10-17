@@ -74,7 +74,7 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
         composable("dashboard") { RutaPrivada("dashboard", sesion) {
             DashboardScreen(sesion.nombre, onCatalogo = { abrir("catalogo") }, onCerrarSesion = { pedirSalida("bienvenida") },
                 onCotizacion = { abrir("cotizacion") }, onHistorial = { abrir("solicitudes") },
-                onFavoritos = { abrir("favoritos") }, onPerfil = { abrir("perfil") }, onNovedades = { abrir("novedades") })
+                onFavoritos = { abrir("favoritos") }, onPerfil = { abrir("perfil") }, onNovedades = { abrir("novedades") }, onEscaner = { abrir("escaner") }, onMapa = { abrir("mapa") })
         } }
         composable("perfil") { RutaPrivada("perfil", sesion) {
             val factory = remember(db, sesionVm) { viewModelFactory {
@@ -85,6 +85,22 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
                 onVolver = { nav.popBackStack() }, onCerrarSesion = { pedirSalida("bienvenida") }, onCambiarUsuario = { pedirSalida("login") })
         } }
         composable("catalogo") { RutaPrivada("catalogo", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
+        composable("escaner") { RutaPrivada("escaner", sesion) {
+            val factory = remember(db) { viewModelFactory { initializer { QrViewModel(QrRepository(db.productoDao())) } } }
+            val vm: QrViewModel = viewModel(factory = factory)
+            QrScannerScreen(vm, onVolver = { nav.popBackStack() }, onProducto = { id ->
+                nav.navigate("producto/$id") { popUpTo("escaner") { inclusive = true }; launchSingleTop = true }
+            }, onDemo = { abrir("qr-demo") })
+        } }
+        composable("qr-demo") { RutaPrivada("qr-demo", sesion) {
+            val factory = remember(productosRepo) { viewModelFactory { initializer { QrDemoViewModel(productosRepo) } } }
+            val vm: QrDemoViewModel = viewModel(factory = factory)
+            QrDemoScreen(vm, onVolver = { nav.popBackStack() })
+        } }
+        composable("mapa") { RutaPrivada("mapa", sesion) {
+            val vm: MapaViewModel = viewModel()
+            MapaScreen(vm, onVolver = { nav.popBackStack() })
+        } }
         composable("favoritos") { RutaPrivada("favoritos", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, abrirFavoritos = true, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
         composable("admin/productos") { RutaPrivada("admin/productos", sesion) {
             val factory = remember(productosRepo) { viewModelFactory { initializer { AdminProductosViewModel(productosRepo) } } }
