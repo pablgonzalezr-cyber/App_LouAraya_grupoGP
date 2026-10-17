@@ -105,12 +105,15 @@ fun AppNavigation() {
             )
         }
 
+
         composable("catalogo") {
             CatalogoScreen(
                 onVolver = {
                     navController.popBackStack()
-                }
+                },
+                usuarioId = sesion.usuarioId
             )
         }
+
     }
 }
