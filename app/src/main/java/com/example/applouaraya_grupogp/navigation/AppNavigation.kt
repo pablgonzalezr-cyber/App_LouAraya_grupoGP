@@ -5,6 +5,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.applouaraya_grupogp.ui.screens.*
 import com.example.applouaraya_grupogp.viewmodel.RegistroViewModel
 import com.example.applouaraya_grupogp.viewmodel.SesionViewModel
@@ -89,6 +91,8 @@ fun AppNavigation() {
         composable("dashboard") {
             DashboardScreen(
                 nombre = sesion.nombre,
+                onCotizacion = { navController.navigate("cotizacion") { launchSingleTop = true } },
+                onHistorial = { navController.navigate("solicitudes") { launchSingleTop = true } },
                 onCatalogo = {
                     navController.navigate("catalogo")
                 },
@@ -105,6 +109,48 @@ fun AppNavigation() {
             )
         }
 
+
+        composable("cotizacion") {
+            val usuarioId = sesion.usuarioId
+            if (usuarioId != null) {
+                CotizacionScreen(usuarioId, onVolver = { navController.popBackStack() }, onGuardada = { id ->
+                    navController.navigate("solicitudes") {
+                        popUpTo("cotizacion") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                    navController.navigate("solicitud/$id")
+                })
+            } else {
+                LaunchedEffect(Unit) { navController.navigate("login") { popUpTo("bienvenida"); launchSingleTop = true } }
+            }
+        }
+        composable("solicitudes") {
+            val usuarioId = sesion.usuarioId
+            if (usuarioId != null) {
+                HistorialCotizacionesScreen(usuarioId, onVolver = { navController.popBackStack() },
+                    onAbrir = { id -> navController.navigate("solicitud/$id") { launchSingleTop = true } })
+            } else {
+                LaunchedEffect(Unit) { navController.navigate("login") { popUpTo("bienvenida"); launchSingleTop = true } }
+            }
+        }
+
+        composable(
+            route = "solicitud/{id}",
+            arguments = listOf(
+                navArgument("id") {
+                    type = NavType.LongType
+                }
+            )
+        ) { entrada ->
+
+        val usuarioId = sesion.usuarioId
+            if (usuarioId != null) {
+                DetalleCotizacionScreen(usuarioId, entrada.arguments?.getLong("id") ?: -1L,
+                    onVolver = { navController.popBackStack() })
+            } else {
+                LaunchedEffect(Unit) { navController.navigate("login") { popUpTo("bienvenida"); launchSingleTop = true } }
+            }
+        }
 
         composable("catalogo") {
             CatalogoScreen(

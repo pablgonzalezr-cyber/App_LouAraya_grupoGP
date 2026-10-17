@@ -1,0 +1,30 @@
+package com.example.applouaraya_grupogp.data
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import com.example.applouaraya_grupogp.model.CotizacionEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+abstract class CotizacionDao {
+    @Query("SELECT * FROM cotizaciones WHERE usuarioId = :usuarioId ORDER BY creadaEn DESC, id DESC")
+    abstract fun observarPropias(usuarioId: Long): Flow<List<CotizacionEntity>>
+
+    @Query("SELECT * FROM cotizaciones WHERE id = :id AND usuarioId = :usuarioId LIMIT 1")
+    abstract fun observarDetalle(usuarioId: Long, id: Long): Flow<CotizacionEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract suspend fun insertar(solicitud: CotizacionEntity): Long
+
+    @Query("SELECT id FROM cotizaciones WHERE tokenEnvio = :token AND usuarioId = :usuarioId")
+    abstract suspend fun buscarToken(token: String, usuarioId: Long): Long?
+
+    @Transaction
+    open suspend fun guardarUnaVez(solicitud: CotizacionEntity): Long {
+        val id = insertar(solicitud)
+        return if (id != -1L) id else checkNotNull(buscarToken(solicitud.tokenEnvio, solicitud.usuarioId))
+    }
+}

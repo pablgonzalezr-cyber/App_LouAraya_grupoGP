@@ -1,6 +1,8 @@
 package com.example.applouaraya_grupogp.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -12,12 +14,16 @@ import androidx.compose.ui.unit.dp
 fun DashboardScreen(
     nombre: String,
     onCatalogo: () -> Unit,
-    onCerrarSesion: () -> Unit
+    onCerrarSesion: () -> Unit,
+    onCotizacion: () -> Unit,
+    onHistorial: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF7F1E8))
+            .safeDrawingPadding()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -65,7 +71,13 @@ fun DashboardScreen(
             }
         }
 
-        Spacer(Modifier.weight(1f))
+        Button(onClick = onCotizacion, modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA65E43))) {
+            Text("Cotización personalizada")
+        }
+        OutlinedButton(onClick = onHistorial, modifier = Modifier.fillMaxWidth()) {
+            Text("Mis solicitudes")
+        }
 
         OutlinedButton(
             onClick = onCerrarSesion,
