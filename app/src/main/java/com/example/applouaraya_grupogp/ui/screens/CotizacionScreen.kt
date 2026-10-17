@@ -17,7 +17,7 @@ import com.example.applouaraya_grupogp.validation.CotizacionValidator
 import com.example.applouaraya_grupogp.viewmodel.CotizacionViewModel
 
 @Composable
-fun CotizacionScreen(usuarioId: Long, onVolver: () -> Unit, onGuardada: (Long) -> Unit) {
+fun CotizacionScreen(usuarioId: Long, onVolver: () -> Unit, onGuardada: (Long) -> Unit, mostrarAyuda: Boolean = true) {
     val vm: CotizacionViewModel = viewModel()
     val estado by vm.estado.collectAsState()
     val f = estado.formulario
@@ -26,7 +26,7 @@ fun CotizacionScreen(usuarioId: Long, onVolver: () -> Unit, onGuardada: (Long) -
         .verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         TextButton(onClick = onVolver) { Text("← Volver") }
         Text("Cotización personalizada", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF51362B))
-        Text("Tu solicitud se guardará en este dispositivo. No se envía a Lou Araya por Internet.")
+        if (mostrarAyuda) Text("Tu solicitud se guardará en este dispositivo. No se envía a Lou Araya por Internet.")
         CampoCotizacion("Descripción", f.descripcion, estado.errores["descripcion"], !estado.guardando, multilinea = true) { vm.cambiar(f.copy(descripcion = it)) }
         SelectorCotizacion("Categoría", listOf("" to "Selecciona una categoría") + CotizacionValidator.categorias.map { it to it }, f.categoria, !estado.guardando) { vm.cambiar(f.copy(categoria = it)) }
         estado.errores["categoria"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }

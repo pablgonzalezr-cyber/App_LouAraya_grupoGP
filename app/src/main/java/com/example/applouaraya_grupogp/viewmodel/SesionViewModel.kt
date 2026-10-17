@@ -10,6 +10,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 data class SesionUiState(
     val rol: String = "CLIENTE",
@@ -20,15 +21,14 @@ data class SesionUiState(
     val error: String? = null
 )
 
-class SesionViewModel(application: Application) :
+class SesionViewModel @JvmOverloads constructor(application: Application,
+    private val repositorio: UsuarioRepository = UsuarioRepository(AppDatabase.obtener(application).usuarioDao())) :
     AndroidViewModel(application) {
-
-    private val repositorio = UsuarioRepository(
-        AppDatabase.obtener(application).usuarioDao()
-    )
 
     private val _estado = MutableStateFlow(SesionUiState())
     val estado = _estado.asStateFlow()
+    private var operacionTrabajo: Job? = null
+    private var observacion: Job? = null
 
     fun registrar(
         nombre: String,
@@ -61,7 +61,7 @@ class SesionViewModel(application: Application) :
     ) {
         if (_estado.value.cargando) return
 
-        viewModelScope.launch {
+        operacionTrabajo = viewModelScope.launch {
             _estado.value = _estado.value.copy(
                 cargando = true,
                 error = null
@@ -76,6 +76,16 @@ class SesionViewModel(application: Application) :
                     correo = usuario.correo,
                     rol = usuario.rol
                 )
+                observacion?.cancel()
+                observacion = viewModelScope.launch {
+                    repositorio.observarPorId(usuario.id).collect { actualizado ->
+                        if (_estado.value.usuarioId == usuario.id) {
+                            if (actualizado == null) cerrarSesion()
+                            else _estado.value = _estado.value.copy(nombre = actualizado.nombre,
+                                correo = actualizado.correo, rol = actualizado.rol)
+                        }
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -96,6 +106,8 @@ class SesionViewModel(application: Application) :
     }
 
     fun cerrarSesion() {
+        operacionTrabajo?.cancel()
+        observacion?.cancel()
         _estado.value = SesionUiState()
     }
 }

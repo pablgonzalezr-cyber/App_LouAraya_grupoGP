@@ -1,6 +1,8 @@
 package com.example.applouaraya_grupogp.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -17,9 +19,10 @@ import com.example.applouaraya_grupogp.repository.PoliticaAdministracion
 import com.example.applouaraya_grupogp.viewmodel.AdminCotizacionesViewModel
 
 @Composable
-private fun AdminMarco(titulo: String, volver: () -> Unit, contenido: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        TextButton(onClick = volver) { Text("← Volver") }
+private fun AdminMarco(titulo: String, volver: () -> Unit, mostrarVolver: Boolean = true, desplazable: Boolean = false, contenido: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding()
+        .then(if (desplazable) Modifier.verticalScroll(rememberScrollState()) else Modifier).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (mostrarVolver) TextButton(onClick = volver) { Text("← Volver") }
         Text(titulo, style = MaterialTheme.typography.headlineMedium, color = Color(0xFF51362B))
         Text("Administración local · solo datos de este dispositivo", style = MaterialTheme.typography.bodySmall)
         contenido()
@@ -27,15 +30,16 @@ private fun AdminMarco(titulo: String, volver: () -> Unit, contenido: @Composabl
 }
 
 @Composable
-fun AdminDashboardScreen(vm: AdminCotizacionesViewModel, onSolicitudes: () -> Unit, onCerrarSesion: () -> Unit) {
+fun AdminDashboardScreen(vm: AdminCotizacionesViewModel, onSolicitudes: () -> Unit, onCerrarSesion: () -> Unit, onPerfil: () -> Unit) {
     val estado by vm.estado.collectAsState()
     LaunchedEffect(vm) { vm.cargar() }
-    AdminMarco("Administración Lou Araya", onCerrarSesion) {
+    AdminMarco("Administración Lou Araya", onCerrarSesion, mostrarVolver = false, desplazable = true) {
         if (estado.cargando) CircularProgressIndicator()
         estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = { vm.cargar() }) { Text("Reintentar") } }
         Text("Total de solicitudes: ${estado.solicitudes.size}")
         EstadoCotizacion.entries.forEach { e -> Text("${e.name}: ${estado.solicitudes.count { it.estado == e.name }}") }
         Button(onClick = onSolicitudes, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA65E43))) { Text("Gestionar solicitudes") }
+        OutlinedButton(onClick = onPerfil) { Text("Perfil y configuración") }
         OutlinedButton(onClick = onCerrarSesion) { Text("Cerrar sesión") }
     }
 }

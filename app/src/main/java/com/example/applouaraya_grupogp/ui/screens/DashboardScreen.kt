@@ -16,7 +16,9 @@ fun DashboardScreen(
     onCatalogo: () -> Unit,
     onCerrarSesion: () -> Unit,
     onCotizacion: () -> Unit,
-    onHistorial: () -> Unit
+    onHistorial: () -> Unit,
+    onFavoritos: () -> Unit,
+    onPerfil: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -78,6 +80,8 @@ fun DashboardScreen(
         OutlinedButton(onClick = onHistorial, modifier = Modifier.fillMaxWidth()) {
             Text("Mis solicitudes")
         }
+        OutlinedButton(onClick = onFavoritos, modifier = Modifier.fillMaxWidth()) { Text("Mis favoritos") }
+        OutlinedButton(onClick = onPerfil, modifier = Modifier.fillMaxWidth()) { Text("Perfil y configuración") }
 
         OutlinedButton(
             onClick = onCerrarSesion,

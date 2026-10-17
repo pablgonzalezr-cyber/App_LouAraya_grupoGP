@@ -22,7 +22,7 @@ import com.example.applouaraya_grupogp.viewmodel.FavoritosViewModel
 // Conserva onVolver; usuarioId tiene valor por defecto para que compile
 // con el AppNavigation.kt que ya existe, sin modificarlo en esta rama.
 @Composable
-fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null) {
+fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos: Boolean = false) {
     val catalogoVm: CatalogoViewModel = viewModel()
     val favoritosVm: FavoritosViewModel = viewModel()
     val estado by catalogoVm.estado.collectAsState()
@@ -30,7 +30,7 @@ fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null) {
     val puedeGuardar = usuarioId != null && usuarioId > 0L
 
     LaunchedEffect(usuarioId) { favoritosVm.seleccionarUsuario(usuarioId) }
-    var vista by rememberSaveable { mutableStateOf("catalogo") }
+    var vista by rememberSaveable { mutableStateOf(if (abrirFavoritos) "favoritos" else "catalogo") }
     var detalleId by rememberSaveable { mutableIntStateOf(-1) }
 
     BackHandler(enabled = vista != "catalogo") {

@@ -17,6 +17,7 @@ import com.example.applouaraya_grupogp.model.RolUsuario
 class UsuarioRepository(
     private val dao: UsuarioDao
 ) {
+    fun observarPorId(id: Long) = dao.observarPorId(id)
     companion object {
         const val CORREO_DEMO = "admin@louaraya.example"
         const val CLAVE_DEMO = "LouDemo2026!"
