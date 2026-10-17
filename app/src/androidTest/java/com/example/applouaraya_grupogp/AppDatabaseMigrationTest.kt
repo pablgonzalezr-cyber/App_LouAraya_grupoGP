@@ -42,19 +42,50 @@ class AppDatabaseMigrationTest {
                     assertEquals(hashTexto, cursor.getString(2))
                 }
             }
-            val db = Room.databaseBuilder(contexto, AppDatabase::class.java, nombre).addMigrations(AppDatabase.MIGRATION_1_2).build()
+            val db = Room.databaseBuilder(contexto, AppDatabase::class.java, nombre).addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
             val id = try {
                 val usuario = UsuarioRepository(db.usuarioDao()).iniciarSesion("anterior@example.test", password)
                 assertNotNull(usuario)
                 assertEquals(7L, usuario!!.id)
                 CotizacionRepository(db.cotizacionDao()).guardar(usuario.id, "token-migracion", CotizacionFormulario("Tapiz para habitación", "Interiores", "Algodón", "45", "70", "1"))
             } finally { db.close() }
-            val reabierta = Room.databaseBuilder(contexto, AppDatabase::class.java, nombre).addMigrations(AppDatabase.MIGRATION_1_2).build()
+            val reabierta = Room.databaseBuilder(contexto, AppDatabase::class.java, nombre).addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
             try {
                 assertEquals("PENDIENTE", reabierta.cotizacionDao().observarDetalle(7, id).first()!!.estado)
                 assertEquals(1, reabierta.cotizacionDao().observarPropias(7).first().size)
                 assertNotNull(UsuarioRepository(reabierta.usuarioDao()).iniciarSesion("anterior@example.test", password))
             } finally { reabierta.close() }
+        } finally { contexto.deleteDatabase(nombre) }
+    }
+
+    @Test fun migracionDosATresConservaUsuarioYSolicitud() {
+        val nombre = "prueba-rol-${UUID.randomUUID()}.db"
+        val contexto = InstrumentationRegistry.getInstrumentation().targetContext
+        try {
+            helper.createDatabase(nombre, 2).use { db ->
+                db.execSQL("INSERT INTO usuarios (id,nombre,correo,salt,claveHash) VALUES (9,'Cliente previo','previo@example.test','salt-previo','hash-previo')")
+                db.execSQL("INSERT INTO cotizaciones (id,usuarioId,tokenEnvio,descripcion,categoria,material,anchoCm,largoCm,cantidad,fechaRequerida,productoReferenciaId,productoReferenciaNombre,creadaEn,estado) VALUES (12,9,'token-previo','Tapiz anterior','Interiores','Algodón',45.5,70,2,'2026-10-20',1,'Tapiz Bohemio',123456,'PENDIENTE')")
+            }
+            helper.runMigrationsAndValidate(nombre, 3, true, AppDatabase.MIGRATION_2_3).use { db ->
+                db.query("SELECT nombre,correo,salt,claveHash,rol FROM usuarios WHERE id=9").use { c ->
+                    assertTrue(c.moveToFirst())
+                    assertEquals(listOf("Cliente previo", "previo@example.test", "salt-previo", "hash-previo", "CLIENTE"), (0..4).map { c.getString(it) })
+                }
+                db.query("SELECT usuarioId,tokenEnvio,descripcion,anchoCm,cantidad,estado FROM cotizaciones WHERE id=12").use { c ->
+                    assertTrue(c.moveToFirst()); assertEquals(9L, c.getLong(0)); assertEquals("token-previo", c.getString(1))
+                    assertEquals("Tapiz anterior", c.getString(2)); assertEquals(45.5, c.getDouble(3), 0.001)
+                    assertEquals(2, c.getInt(4)); assertEquals("PENDIENTE", c.getString(5))
+                }
+            }
+        } finally { contexto.deleteDatabase(nombre) }
+    }
+
+    @Test fun migracionDirectaUnoATres() {
+        val nombre = "prueba-cadena-${UUID.randomUUID()}.db"
+        val contexto = InstrumentationRegistry.getInstrumentation().targetContext
+        try {
+            helper.createDatabase(nombre, 1).close()
+            helper.runMigrationsAndValidate(nombre, 3, true, AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).close()
         } finally { contexto.deleteDatabase(nombre) }
     }
 }

@@ -10,6 +10,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 abstract class CotizacionDao {
+    @Query("SELECT * FROM cotizaciones WHERE EXISTS (SELECT 1 FROM usuarios WHERE id = :actorId AND rol = 'ADMINISTRADOR') ORDER BY creadaEn DESC, id DESC")
+    abstract fun observarAdministracion(actorId: Long): Flow<List<CotizacionEntity>>
+
+    @Query("SELECT * FROM cotizaciones WHERE id = :id AND EXISTS (SELECT 1 FROM usuarios WHERE id = :actorId AND rol = 'ADMINISTRADOR') LIMIT 1")
+    abstract fun detalleAdministracion(actorId: Long, id: Long): Flow<CotizacionEntity?>
+
+    @Query("SELECT * FROM cotizaciones WHERE id = :id LIMIT 1")
+    abstract suspend fun buscarPorId(id: Long): CotizacionEntity?
+
+    @Query("UPDATE cotizaciones SET estado = :nuevo WHERE id = :id AND estado = :anterior AND EXISTS (SELECT 1 FROM usuarios WHERE id = :actorId AND rol = 'ADMINISTRADOR')")
+    abstract suspend fun cambiarEstadoAdministracion(actorId: Long, id: Long, anterior: String, nuevo: String): Int
     @Query("SELECT * FROM cotizaciones WHERE usuarioId = :usuarioId ORDER BY creadaEn DESC, id DESC")
     abstract fun observarPropias(usuarioId: Long): Flow<List<CotizacionEntity>>
 

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class SesionUiState(
+    val rol: String = "CLIENTE",
     val usuarioId: Long? = null,
     val nombre: String = "",
     val correo: String = "",
@@ -72,7 +73,8 @@ class SesionViewModel(application: Application) :
                 _estado.value = SesionUiState(
                     usuarioId = usuario.id,
                     nombre = usuario.nombre,
-                    correo = usuario.correo
+                    correo = usuario.correo,
+                    rol = usuario.rol
                 )
             } catch (e: CancellationException) {
                 throw e

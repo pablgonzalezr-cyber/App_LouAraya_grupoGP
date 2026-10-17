@@ -7,6 +7,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.applouaraya_grupogp.data.AppDatabase
+import com.example.applouaraya_grupogp.repository.AdminCotizacionesRepository
+import com.example.applouaraya_grupogp.repository.PoliticaAdministracion
+import com.example.applouaraya_grupogp.viewmodel.AdminCotizacionesViewModel
 import com.example.applouaraya_grupogp.ui.screens.*
 import com.example.applouaraya_grupogp.viewmodel.RegistroViewModel
 import com.example.applouaraya_grupogp.viewmodel.SesionViewModel
@@ -20,16 +27,21 @@ fun AppNavigation() {
     val sesionViewModel: SesionViewModel = viewModel()
 
     val sesion by sesionViewModel.estado.collectAsState()
+    val cerrarSesion: () -> Unit = {
+        sesionViewModel.cerrarSesion()
+        navController.navigate("bienvenida") { popUpTo(navController.graph.id) { inclusive = true }; launchSingleTop = true }
+    }
 
     // Navegar cuando el registro o login sea exitoso
-    LaunchedEffect(sesion.usuarioId) {
+    LaunchedEffect(sesion.usuarioId, sesion.rol) {
+        val destino = if (PoliticaAdministracion.esAdministrador(sesion.rol)) "admin" else "dashboard"
         if (
             sesion.usuarioId != null &&
-            navController.currentDestination?.route != "dashboard"
+            navController.currentDestination?.route != destino
         ) {
             registroViewModel.limpiarFormulario()
 
-            navController.navigate("dashboard") {
+            navController.navigate(destino) {
                 popUpTo("bienvenida") {
                     inclusive = true
                 }
@@ -42,6 +54,21 @@ fun AppNavigation() {
         navController = navController,
         startDestination = "bienvenida"
     ) {
+        composable("admin") {
+            AdminConPermiso(sesionViewModel, { navController.navigate("login") { popUpTo("bienvenida"); launchSingleTop = true } }) { vm ->
+                AdminDashboardScreen(vm, onSolicitudes = { navController.navigate("admin/solicitudes") }, onCerrarSesion = cerrarSesion)
+            }
+        }
+        composable("admin/solicitudes") {
+            AdminConPermiso(sesionViewModel, { navController.navigate("login") { popUpTo("bienvenida"); launchSingleTop = true } }) { vm ->
+                AdminSolicitudesScreen(vm, onVolver = { navController.popBackStack() }, onAbrir = { navController.navigate("admin/solicitud/$it") })
+            }
+        }
+        composable("admin/solicitud/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entrada ->
+            AdminConPermiso(sesionViewModel, { navController.navigate("login") { popUpTo("bienvenida"); launchSingleTop = true } }) { vm ->
+                AdminDetalleSolicitudScreen(vm, entrada.arguments?.getLong("id") ?: -1L, onVolver = { navController.popBackStack() })
+            }
+        }
 
         composable("bienvenida") {
             BienvenidaScreen(
@@ -162,4 +189,24 @@ fun AppNavigation() {
         }
 
     }
+}
+
+@Composable
+private fun AdminConPermiso(sesionVm: SesionViewModel, denegado: () -> Unit, contenido: @Composable (AdminCotizacionesViewModel) -> Unit) {
+    val sesion by sesionVm.estado.collectAsState()
+    if (sesion.usuarioId == null || !PoliticaAdministracion.esAdministrador(sesion.rol)) {
+        LaunchedEffect(sesion.usuarioId, sesion.rol) { denegado() }
+        return
+    }
+    val contexto = LocalContext.current.applicationContext
+    val factory = remember(contexto, sesionVm) {
+        viewModelFactory {
+            initializer {
+                val db = AppDatabase.obtener(contexto)
+                AdminCotizacionesViewModel(AdminCotizacionesRepository(db.usuarioDao(), db.cotizacionDao()) { sesionVm.estado.value.usuarioId })
+            }
+        }
+    }
+    val vm: AdminCotizacionesViewModel = viewModel(factory = factory)
+    contenido(vm)
 }

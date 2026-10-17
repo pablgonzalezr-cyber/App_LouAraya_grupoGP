@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [UsuarioEntity::class, CotizacionEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,6 +20,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cotizacionDao(): CotizacionDao
 
     companion object {
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `usuarios` ADD COLUMN `rol` TEXT NOT NULL DEFAULT 'CLIENTE'")
+            }
+        }
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""CREATE TABLE IF NOT EXISTS `cotizaciones` (
@@ -44,7 +49,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "lou_araya.db"
-                ).addMigrations(MIGRATION_1_2).build().also {
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also {
                     INSTANCIA = it
                 }
             }

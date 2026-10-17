@@ -10,16 +10,37 @@ import java.security.SecureRandom
 import java.util.Locale
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.example.applouaraya_grupogp.model.RolUsuario
 
 class UsuarioRepository(
     private val dao: UsuarioDao
 ) {
+    companion object {
+        const val CORREO_DEMO = "admin@louaraya.example"
+        const val CLAVE_DEMO = "LouDemo2026!"
+        private val provisionMutex = Mutex()
+    }
+
+    // Solo se crea una cuenta reservada. Nunca se promueve ni sobrescribe una existente.
+    private suspend fun prepararDemo() = provisionMutex.withLock {
+        if (dao.buscarPorCorreo(CORREO_DEMO) == null) {
+            crear("Administración de demostración", CORREO_DEMO, CLAVE_DEMO, RolUsuario.ADMINISTRADOR)
+        }
+    }
 
     suspend fun registrar(
         nombre: String,
         correo: String,
         clave: String
     ): UsuarioEntity = withContext(Dispatchers.IO) {
+        prepararDemo()
+        require(correo.trim().lowercase(Locale.ROOT) != CORREO_DEMO) { "Correo reservado para la demostración" }
+        crear(nombre, correo, clave, RolUsuario.CLIENTE)
+    }
+
+    private suspend fun crear(nombre: String, correo: String, clave: String, rol: RolUsuario): UsuarioEntity {
 
         val correoNormalizado =
             correo.trim().lowercase(Locale.ROOT)
@@ -42,23 +63,28 @@ class UsuarioRepository(
             nombre = nombre.trim(),
             correo = correoNormalizado,
             salt = salt,
-            claveHash = generarHash(clave, saltBytes)
+            claveHash = generarHash(clave, saltBytes),
+            rol = rol.name
         )
 
         val id = dao.insertar(usuario)
-        usuario.copy(id = id)
+        return usuario.copy(id = id)
     }
 
     suspend fun iniciarSesion(
         correo: String,
         clave: String
     ): UsuarioEntity? = withContext(Dispatchers.IO) {
+        prepararDemo()
 
         val correoNormalizado =
             correo.trim().lowercase(Locale.ROOT)
 
         val usuario = dao.buscarPorCorreo(correoNormalizado)
             ?: return@withContext null
+        if (correoNormalizado == CORREO_DEMO && usuario.rol != RolUsuario.ADMINISTRADOR.name) {
+            throw IllegalArgumentException("El correo de demostración ya pertenece a una cuenta cliente. No se modificaron sus permisos.")
+        }
 
         val saltBytes = Base64.decode(
             usuario.salt,
