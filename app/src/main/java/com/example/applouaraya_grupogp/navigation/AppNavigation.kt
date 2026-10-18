@@ -29,6 +29,7 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
     val db = remember(contexto, basePrueba) { basePrueba ?: AppDatabase.obtener(contexto) }
     val nav = controlador
     val registro: RegistroViewModel = viewModel()
+    val formularioRegistro by registro.estado.collectAsState()
     val sesionFactory = remember(db, contexto) { viewModelFactory {
         initializer { SesionViewModel(contexto as Application, UsuarioRepository(db.usuarioDao())) }
     } }
@@ -85,19 +86,22 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
     LaunchedEffect(abrirCentro, sesion.usuarioId, ruta) {
         // El PendingIntent no contiene destinatario ni ruta privada. Tras autenticar,
         // siempre abre exclusivamente el centro de la sesión actual.
-        if(abrirCentro && sesion.usuarioId != null && PoliticaNavegacion.permite("avisos", sesion.usuarioId, sesion.rol) && ruta !in setOf(null, "login", "registro", "bienvenida")) {
+        if(abrirCentro && sesion.usuarioId != null && PoliticaNavegacion.permite("avisos", sesion.usuarioId, sesion.rol) && ruta !in setOf(null, "login", "registro", "resumen", "bienvenida")) {
             abrir("avisos"); centroConsumido()
         }
     }
 
     // Protege el contenido y corrige destinos privados restaurados sin sesión.
-    LaunchedEffect(sesion.usuarioId, sesion.rol, ruta) {
+    LaunchedEffect(sesion.usuarioId, sesion.rol, ruta, formularioRegistro.resumenDisponible) {
         if (ruta == null) return@LaunchedEffect
         if (sesion.usuarioId != null && (sesion.usuarioId!! <= 0 || sesion.rol !in setOf("CLIENTE", "ADMINISTRADOR"))) {
             salir("login")
-        } else if (sesion.usuarioId != null && ruta in setOf("bienvenida", "login", "registro")) {
+        } else if (sesion.usuarioId != null && ruta in setOf("bienvenida", "login", "registro", "resumen")) {
             registro.limpiarFormulario()
             reemplazar(PoliticaNavegacion.inicio(sesion.rol))
+        } else if(ruta == "resumen" && !formularioRegistro.resumenDisponible) {
+            // Destino restaurado tras perder el borrador: no confirmar datos vacíos.
+            nav.navigate("registro") { popUpTo("resumen") { inclusive = true }; launchSingleTop = true }
         } else if (!PoliticaNavegacion.permite(ruta, sesion.usuarioId, sesion.rol)) {
             reemplazar(if (sesion.usuarioId == null) "login" else PoliticaNavegacion.inicio(sesion.rol))
         }
@@ -106,7 +110,25 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
         composable("bienvenida") { BienvenidaScreen(onComenzar = { sesionVm.limpiarError(); abrir("login") }, onRegistrarse = { sesionVm.limpiarError(); abrir("registro") }) }
         composable("login") { LoginScreen(sesion.cargando, sesion.error,
             onIngresar = sesionVm::iniciarSesion, onRegistrarse = { sesionVm.limpiarError(); abrir("registro") }) }
-        composable("registro") { RegistroScreen(registro, sesion.cargando, sesion.error, onRegistrar = sesionVm::registrar) }
+        composable("registro") { RegistroScreen(registro, sesion.cargando, sesion.error, onContinuar = {
+            sesionVm.limpiarError()
+            abrir("resumen")
+        }) }
+        composable("resumen") {
+            if(sesion.usuarioId == null && formularioRegistro.resumenDisponible) {
+                ResumenScreen(registro, sesion.cargando, sesion.error, onEditar = {
+                    if(!sesionVm.estado.value.cargando) {
+                        sesionVm.limpiarError()
+                        nav.popBackStack()
+                        registro.volverAEditar()
+                    }
+                }, onConfirmar = {
+                    // La credencial permanece en el ViewModel; nunca viaja en rutas.
+                    val datos = registro.estado.value
+                    if(datos.resumenDisponible) sesionVm.registrar(datos.nombre, datos.correo, datos.clave)
+                })
+            }
+        }
         composable("dashboard") { RutaPrivada("dashboard", sesion) {
             DashboardScreen(sesion.nombre, onCatalogo = { abrir("catalogo") }, onCerrarSesion = { pedirSalida("bienvenida") },
                 onCotizacion = { abrir("cotizacion") }, onHistorial = { abrir("solicitudes") },

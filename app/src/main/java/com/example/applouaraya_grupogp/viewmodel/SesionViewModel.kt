@@ -59,14 +59,13 @@ class SesionViewModel @JvmOverloads constructor(application: Application,
     private fun procesar(
         operacion: suspend () -> UsuarioEntity
     ) {
-        if (_estado.value.cargando) return
+        if (_estado.value.cargando || _estado.value.usuarioId != null) return
+
+        // Bloquear antes de lanzar la corrutina, incluso si llegan varios clics
+        // antes de recomponer la UI. Una sesión creada tampoco vuelve a registrar.
+        _estado.value = _estado.value.copy(cargando = true, error = null)
 
         operacionTrabajo = viewModelScope.launch {
-            _estado.value = _estado.value.copy(
-                cargando = true,
-                error = null
-            )
-
             try {
                 val usuario = operacion()
 

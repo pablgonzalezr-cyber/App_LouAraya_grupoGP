@@ -21,7 +21,7 @@ class PoliticaNavegacionTest {
         clientes.forEach { assertFalse(Politica.permite(it, 1L, "ADMINISTRADOR")) }
     }
     @Test fun rutasPublicasSonAccesiblesSinSesion() {
-        listOf("bienvenida", "login", "registro").forEach { assertTrue(Politica.permite(it, null, "CLIENTE")) }
+        listOf("bienvenida", "login", "registro", "resumen").forEach { assertTrue(Politica.permite(it, null, "CLIENTE")) }
     }
     @Test fun desconocidosNoOtorganAcceso() {
         (clientes + admins + "perfil").forEach { assertFalse(Politica.permite(it, 1L, "DESCONOCIDO")) }

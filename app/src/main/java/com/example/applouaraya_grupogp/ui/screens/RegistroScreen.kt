@@ -17,7 +17,7 @@ fun RegistroScreen(
     viewModel: RegistroViewModel,
     cargando: Boolean,
     errorGeneral: String?,
-    onRegistrar: (String, String, String) -> Unit
+    onContinuar: () -> Unit
 ) {
     val estado by viewModel.estado.collectAsState()
 
@@ -44,6 +44,7 @@ fun RegistroScreen(
             onValueChange = viewModel::cambiarNombre,
             label = { Text("Nombre") },
             singleLine = true,
+            enabled = !cargando,
             isError = estado.errorNombre != null,
             supportingText = {
                 estado.errorNombre?.let { Text(it) }
@@ -56,6 +57,7 @@ fun RegistroScreen(
             onValueChange = viewModel::cambiarCorreo,
             label = { Text("Correo ficticio") },
             singleLine = true,
+            enabled = !cargando,
             isError = estado.errorCorreo != null,
             supportingText = {
                 estado.errorCorreo?.let { Text(it) }
@@ -69,6 +71,7 @@ fun RegistroScreen(
             label = { Text("Contraseña de prueba") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
+            enabled = !cargando,
             isError = estado.errorClave != null,
             supportingText = {
                 estado.errorClave?.let { Text(it) }
@@ -79,7 +82,8 @@ fun RegistroScreen(
         Row {
             Checkbox(
                 checked = estado.aceptaTerminos,
-                onCheckedChange = viewModel::cambiarTerminos
+                onCheckedChange = viewModel::cambiarTerminos,
+                enabled = !cargando
             )
             Text(
                 "Acepto los términos y condiciones",
@@ -98,11 +102,7 @@ fun RegistroScreen(
         Button(
             onClick = {
                 if (viewModel.validarFormulario()) {
-                    onRegistrar(
-                        estado.nombre,
-                        estado.correo,
-                        estado.clave
-                    )
+                    onContinuar()
                 }
             },
             enabled = !cargando,
@@ -115,7 +115,7 @@ fun RegistroScreen(
         ) {
             Text(
                 if (cargando) "Guardando..."
-                else "Crear cuenta"
+                else "Continuar"
             )
         }
     }
