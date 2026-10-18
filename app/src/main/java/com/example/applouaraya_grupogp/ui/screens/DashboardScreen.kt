@@ -1,11 +1,9 @@
 package com.example.applouaraya_grupogp.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import com.example.applouaraya_grupogp.ui.adaptive.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -25,15 +23,7 @@ fun DashboardScreen(
     onAvisos: () -> Unit,
     avisosNoLeidos: Int
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F1E8))
-            .safeDrawingPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
+    AdaptiveColumn(form = false, spacing = 20.dp) {
         Spacer(Modifier.height(20.dp))
 
         Text(
@@ -78,26 +68,16 @@ fun DashboardScreen(
             }
         }
 
-        Button(onClick = onCotizacion, modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA65E43))) {
-            Text("Cotización personalizada")
-        }
-        OutlinedButton(onClick = onHistorial, modifier = Modifier.fillMaxWidth()) {
-            Text("Mis solicitudes")
-        }
-        OutlinedButton(onClick = onFavoritos, modifier = Modifier.fillMaxWidth()) { Text("Mis favoritos") }
-        OutlinedButton(onClick = onPerfil, modifier = Modifier.fillMaxWidth()) { Text("Perfil y configuración") }
-        OutlinedButton(onClick = onNovedades, modifier = Modifier.fillMaxWidth()) { Text("Colecciones y campañas") }
-        OutlinedButton(onClick = onEscaner, modifier = Modifier.fillMaxWidth()) { Text("Escanear QR") }
-        OutlinedButton(onClick = onMapa, modifier = Modifier.fillMaxWidth()) { Text("Mapa de ferias y showrooms") }
-        OutlinedButton(onClick = onAvisos, modifier = Modifier.fillMaxWidth()) { Text("Centro de avisos ($avisosNoLeidos sin leer)") }
-
-        OutlinedButton(
-            onClick = onCerrarSesion,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Cerrar sesión")
-        }
+        AdaptiveActions(listOf(
+            "Cotización personalizada" to onCotizacion,
+            "Mis solicitudes" to onHistorial,
+            "Mis favoritos" to onFavoritos,
+            "Perfil y configuración" to onPerfil,
+            "Colecciones y campañas" to onNovedades,
+            "Escanear QR" to onEscaner,
+            "Mapa de ferias y showrooms" to onMapa,
+            "Centro de avisos ($avisosNoLeidos sin leer)" to onAvisos,
+            "Cerrar sesión" to onCerrarSesion
+        ))
     }
 }
-

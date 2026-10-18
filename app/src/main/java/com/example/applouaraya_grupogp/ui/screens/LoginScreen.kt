@@ -1,11 +1,11 @@
 package com.example.applouaraya_grupogp.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import com.example.applouaraya_grupogp.ui.adaptive.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -21,14 +21,7 @@ fun LoginScreen(
     var correo by rememberSaveable { mutableStateOf("") }
     var clave by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F1E8))
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
+    AdaptiveColumn(centered = true) {
         Text(
             "Iniciar sesión",
             style = MaterialTheme.typography.headlineMedium,

@@ -1,12 +1,10 @@
 package com.example.applouaraya_grupogp.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.example.applouaraya_grupogp.ui.adaptive.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -23,15 +21,7 @@ fun ResumenScreen(
     val estado by viewModel.estado.collectAsState()
     BackHandler { if(!cargando) onEditar() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F1E8))
-            .safeDrawingPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
+    AdaptiveColumn {
         Text(
             "Resumen de registro",
             style = MaterialTheme.typography.headlineMedium,

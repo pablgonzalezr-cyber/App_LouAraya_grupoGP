@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.example.applouaraya_grupogp.ui.adaptive.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -34,17 +35,29 @@ fun AdminDashboardScreen(vm: AdminCotizacionesViewModel, onSolicitudes: () -> Un
     onAvisos: () -> Unit, avisosNoLeidos: Int) {
     val estado by vm.estado.collectAsState()
     LaunchedEffect(vm) { vm.cargar() }
-    AdminMarco("Administración Lou Araya", onCerrarSesion, mostrarVolver = false, desplazable = true) {
+    AdminDashboardContent(estado, { vm.cargar() }, onSolicitudes, onCerrarSesion, onPerfil, onProductos, onContenido, onAvisos, avisosNoLeidos)
+}
+
+@Composable
+fun AdminDashboardContent(estado: com.example.applouaraya_grupogp.viewmodel.AdminUiState, reintentar: () -> Unit,
+    onSolicitudes: () -> Unit, onCerrarSesion: () -> Unit, onPerfil: () -> Unit, onProductos: () -> Unit,
+    onContenido: () -> Unit, onAvisos: () -> Unit, avisosNoLeidos: Int) {
+    AdaptiveColumn(form = false, padding = 20.dp, spacing = 12.dp) {
+        Text("Administración Lou Araya", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF51362B))
+        Text("Administración local · solo datos de este dispositivo", style = MaterialTheme.typography.bodySmall)
+
         if (estado.cargando) CircularProgressIndicator()
-        estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = { vm.cargar() }) { Text("Reintentar") } }
+        estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = { reintentar() }) { Text("Reintentar") } }
         Text("Total de solicitudes: ${estado.solicitudes.size}")
         EstadoCotizacion.entries.forEach { e -> Text("${e.name}: ${estado.solicitudes.count { it.estado == e.name }}") }
-        Button(onClick = onSolicitudes, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA65E43))) { Text("Gestionar solicitudes") }
-        OutlinedButton(onClick = onPerfil) { Text("Perfil y configuración") }
-        OutlinedButton(onClick = onProductos) { Text("Administrar productos") }
-        OutlinedButton(onClick = onContenido) { Text("Colecciones y campañas") }
-        OutlinedButton(onClick = onAvisos) { Text("Centro de avisos ($avisosNoLeidos sin leer)") }
-        OutlinedButton(onClick = onCerrarSesion) { Text("Cerrar sesión") }
+        AdaptiveActions(listOf(
+            "Gestionar solicitudes" to onSolicitudes,
+            "Perfil y configuración" to onPerfil,
+            "Administrar productos" to onProductos,
+            "Colecciones y campañas" to onContenido,
+            "Centro de avisos ($avisosNoLeidos sin leer)" to onAvisos,
+            "Cerrar sesión" to onCerrarSesion
+        ))
     }
 }
 

@@ -3,7 +3,9 @@ package com.example.applouaraya_grupogp.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.*
+import com.example.applouaraya_grupogp.ui.adaptive.*
+import com.example.applouaraya_grupogp.viewmodel.CatalogoUiState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -74,86 +76,98 @@ fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos
             onQuitar = { id -> favoritosVm.alternar(usuarioId, id) }
         )
         else -> {
-            Column(
-                modifier = Modifier.fillMaxSize()
-                    .background(Color(0xFFF7F1E8))
-                    .padding(16.dp)
-            ) {
-                Row(
+            CatalogoContenido(estado, favoritos, puedeGuardar, onVolver, { vista = "favoritos" },
+                catalogoVm::cambiarConsulta, catalogoVm::cambiarCategoria, catalogoVm::cambiarDisponibles,
+                catalogoVm::cambiarOrdenPrecio, catalogoVm::cargar,
+                { id -> detalleId = id; vista = "detalle" }, { id -> favoritosVm.alternar(usuarioId, id) })
+        }
+    }
+}
+
+
+@Composable
+fun CatalogoContenido(estado: CatalogoUiState, favoritos: Set<Int>, puedeGuardar: Boolean,
+    onVolver: () -> Unit, onFavoritos: () -> Unit, onConsulta: (String) -> Unit,
+    onCategoria: (String) -> Unit, onDisponibles: (Boolean) -> Unit, onOrden: (Boolean) -> Unit,
+    onReintentar: () -> Unit, onDetalle: (Int) -> Unit, onFavorito: (Int) -> Unit) {
+    AdaptiveSurface {
+        LazyVerticalGrid(columns = GridCells.Fixed(columnasPara(LocalLouWidth.current)),
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(
+                modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onVolver) { Text("← Inicio") }
-                    TextButton(
-                        onClick = { vista = "favoritos" },
+                    ) {
+                        TextButton(onClick = onVolver) { Text("← Inicio") }
+                        TextButton(
+                        onClick = onFavoritos,
                         enabled = puedeGuardar
-                    ) { Text("♥ Favoritos (${favoritos.size})") }
-                }
-                Text("Catálogo de macramé", style = MaterialTheme.typography.headlineMedium,
+                        ) { Text("♥ Favoritos (${favoritos.size})") }
+                    }
+                    Text("Catálogo de macramé", style = MaterialTheme.typography.headlineMedium,
                     color = Color(0xFF51362B))
-                Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
                     value = estado.consulta,
-                    onValueChange = catalogoVm::cambiarConsulta,
+                    onValueChange = onConsulta,
                     label = { Text("Buscar por nombre o material") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("Todos") + (listOf("Interiores", "Matrimonios", "Festivales", "Otro") + estado.todos.map { it.categoria }).distinct()) { cat ->
-                        FilterChip(
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(listOf("Todos") + (listOf("Interiores", "Matrimonios", "Festivales", "Otro") + estado.todos.map { it.categoria }).distinct()) { cat ->
+                            FilterChip(
                             selected = estado.categoria == cat,
-                            onClick = { catalogoVm.cambiarCategoria(cat) },
+                            onClick = { onCategoria(cat) },
                             label = { Text(cat) }
-                        )
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = estado.soloDisponibles,
-                        onCheckedChange = catalogoVm::cambiarDisponibles
-                    )
-                    Text("Solo disponibles")
-                }
-                FilterChip(
-                    selected = estado.ordenarPorPrecio,
-                    onClick = { catalogoVm.cambiarOrdenPrecio(!estado.ordenarPorPrecio) },
-                    label = { Text("Ordenar: precio menor primero") }
-                )
-                if (!puedeGuardar) {
-                    Text(
-                        "Favoritos pendientes de vincular con el usuario activo. " +
-                                "El encargado de integración debe pasar usuarioId desde AppNavigation.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF985B42)
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                if (estado.cargando) CircularProgressIndicator()
-                estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = catalogoVm::cargar) { Text("Reintentar") } }
-                Text("${estado.productos.size} diseños encontrados")
-                Spacer(Modifier.height(10.dp))
-                if (estado.productos.isEmpty()) {
-                    Text("No encontramos productos con esos filtros.")
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 24.dp)
-                    ) {
-                        items(estado.productos, key = { it.id }) { producto ->
-                            ProductoCard(
-                                producto = producto,
-                                esFavorito = producto.id in favoritos,
-                                permitirFavorito = puedeGuardar,
-                                onVerDetalle = { detalleId = producto.id; vista = "detalle" },
-                                onFavorito = { favoritosVm.alternar(usuarioId, producto.id) }
                             )
                         }
                     }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                        checked = estado.soloDisponibles,
+                        onCheckedChange = onDisponibles
+                        )
+                        Text("Solo disponibles")
+                    }
+                    FilterChip(
+                    selected = estado.ordenarPorPrecio,
+                    onClick = { onOrden(!estado.ordenarPorPrecio) },
+                    label = { Text("Ordenar: precio menor primero") }
+                    )
+                    if (!puedeGuardar) {
+                        Text(
+                        "Favoritos pendientes de vincular con el usuario activo. " +
+                        "El encargado de integración debe pasar usuarioId desde AppNavigation.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF985B42)
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    if (estado.cargando) CircularProgressIndicator()
+                    estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = onReintentar) { Text("Reintentar") } }
+                    Text("${estado.productos.size} diseños encontrados")
+                    Spacer(Modifier.height(10.dp))
+                    if (estado.productos.isEmpty()) {
+                        Text("No encontramos productos con esos filtros.")
+                    }
                 }
+            }
+            items(estado.productos, key = { it.id }) { producto ->
+                ProductoCard(
+                producto = producto,
+                esFavorito = producto.id in favoritos,
+                permitirFavorito = puedeGuardar,
+                onVerDetalle = { onDetalle(producto.id) },
+                onFavorito = { onFavorito(producto.id) }
+                )
             }
         }
     }
