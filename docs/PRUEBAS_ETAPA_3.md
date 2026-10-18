@@ -82,7 +82,7 @@ Resultado de esta implementación:
 - testDebugUnitTest: 31 pruebas aprobadas, 0 fallos y 0 errores; incluye las 21 anteriores.
 - lintDebug: 0 errores, 21 advertencias (versiones/convenios/recursos y sugerencias KTX).
 - assembleDebugAndroidTest: aprobado; compila los 12 casos.
-- Ejecución instrumentada en teléfono físico R5CY42JVXMT: 12 pruebas ejecutadas,
+- Ejecución instrumentada en teléfono físico SERIAL_SAMSUNG: 12 pruebas ejecutadas,
   12 aprobadas y 0 fallidas, duración 40,707 segundos: `OK (12 tests)`.
   Registro completo en app/build/reports/instrumentadas-etapa3-corregidas.txt.
   No se inició ningún emulador.

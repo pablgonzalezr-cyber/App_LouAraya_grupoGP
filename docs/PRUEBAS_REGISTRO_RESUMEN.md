@@ -67,7 +67,7 @@ No quedan errores de compilación ni pruebas fallidas. Las advertencias de lint 
 
 ## Aislamiento y comandos ejecutados
 
-El dispositivo ADB reconocido fue Samsung SM-A166M, serie `R5CY42JVXMT`. Las pruebas seleccionadas utilizan exclusivamente Room en memoria y preferencias con nombres de prueba únicos. RegistroFlujoTest inyecta la base en AppNavigation y desmonta primero Compose antes de cerrar sus recursos. No se abre la base personal para esos casos ni se publican alertas Android desde la navegación de prueba.
+El dispositivo ADB reconocido fue Samsung SM-A166M, serie `SERIAL_SAMSUNG`. Las pruebas seleccionadas utilizan exclusivamente Room en memoria y preferencias con nombres de prueba únicos. RegistroFlujoTest inyecta la base en AppNavigation y desmonta primero Compose antes de cerrar sus recursos. No se abre la base personal para esos casos ni se publican alertas Android desde la navegación de prueba.
 
 Se actualizaron APK principal y de pruebas mediante `adb install -r`, conservando los datos. No se desinstaló la aplicación ni se borraron usuarios, cotizaciones o favoritos.
 
@@ -75,9 +75,9 @@ Se actualizaron APK principal y de pruebas mediante `adb install -r`, conservand
 .\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --offline --no-configuration-cache --max-workers=1
 $adbLou = "$env:LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
 & $adbLou devices -l
-& $adbLou -s R5CY42JVXMT install -r app/build/outputs/apk/debug/app-debug.apk
-& $adbLou -s R5CY42JVXMT install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-& $adbLou -s R5CY42JVXMT shell am instrument -w -r -e class 'com.example.applouaraya_grupogp.RegistroFlujoTest,com.example.applouaraya_grupogp.RegistroConfirmacionTest,com.example.applouaraya_grupogp.NavegacionPerfilTest,com.example.applouaraya_grupogp.AdministracionTest' com.example.applouaraya_grupogp.test/androidx.test.runner.AndroidJUnitRunner
+& $adbLou -s SERIAL_SAMSUNG install -r app/build/outputs/apk/debug/app-debug.apk
+& $adbLou -s SERIAL_SAMSUNG install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+& $adbLou -s SERIAL_SAMSUNG shell am instrument -w -r -e class 'com.example.applouaraya_grupogp.RegistroFlujoTest,com.example.applouaraya_grupogp.RegistroConfirmacionTest,com.example.applouaraya_grupogp.NavegacionPerfilTest,com.example.applouaraya_grupogp.AdministracionTest' com.example.applouaraya_grupogp.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
 Evidencias locales generadas:

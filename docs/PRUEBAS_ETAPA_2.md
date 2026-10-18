@@ -72,7 +72,7 @@ Resultados de esta implementación:
 - assembleDebug y assembleDebugAndroidTest: aprobados.
 - testDebugUnitTest: 21 pruebas aprobadas, 0 fallos y 0 errores.
 - lintDebug: 0 errores, 19 advertencias de versiones, convenciones y recursos.
-- Recorrido instrumentado final por ADB en R5CY42JVXMT: `OK (7 tests)`,
+- Recorrido instrumentado final por ADB en SERIAL_SAMSUNG: `OK (7 tests)`,
   duración 5,604 segundos, 0 fallos. Reporte completo:
   app/build/reports/instrumentadas-etapa2.txt.
 - El AbstractMethodError anterior del lector de esquemas no se reproduce tras

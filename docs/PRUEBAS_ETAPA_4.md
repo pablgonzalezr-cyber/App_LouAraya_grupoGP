@@ -125,7 +125,7 @@ Resultado final:
 - assembleDebug y assembleDebugAndroidTest: aprobados.
 - testDebugUnitTest: 39 pruebas, 0 fallos y 0 errores.
 - lintDebug: 0 errores, 21 advertencias de versiones, recursos y convenciones.
-- Instrumentadas en el teléfono físico R5CY42JVXMT: `OK (20 tests)`, 69,081 segundos.
+- Instrumentadas en el teléfono físico SERIAL_SAMSUNG: `OK (20 tests)`, 69,081 segundos.
   Reporte completo: app/build/reports/instrumentadas-etapa4-final.txt.
 - git diff --check: sin errores de espacios.
 - Comparación de esquemas 3 y 5: usuarios y cotizaciones idénticos.

@@ -141,12 +141,12 @@ PowerShell desde la raíz:
 .\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --offline --no-configuration-cache --max-workers=1
 $adbLou = "$env:LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
 & $adbLou devices -l
-& $adbLou -s R5CY42JVXMT install -r app/build/outputs/apk/debug/app-debug.apk
-& $adbLou -s R5CY42JVXMT install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-& $adbLou -s R5CY42JVXMT shell am instrument -w -r com.example.applouaraya_grupogp.test/androidx.test.runner.AndroidJUnitRunner
+& $adbLou -s SERIAL_SAMSUNG install -r app/build/outputs/apk/debug/app-debug.apk
+& $adbLou -s SERIAL_SAMSUNG install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+& $adbLou -s SERIAL_SAMSUNG shell am instrument -w -r com.example.applouaraya_grupogp.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-La instalación `-r` actualiza conservando datos. La invocación directa del runner evita tareas que desinstalen al finalizar. El teléfono observado es Samsung SM-A166M, serie `R5CY42JVXMT`; adaptar la serie si se usa otro. Las pruebas de mapa existentes necesitan Internet en el teléfono y las de cámara necesitan el teléfono disponible y desbloqueado. En otro computador sin caché de Gradle, omitir `--offline`.
+La instalación `-r` actualiza conservando datos. La invocación directa del runner evita tareas que desinstalen al finalizar. El teléfono observado es Samsung SM-A166M, serie `SERIAL_SAMSUNG`; adaptar la serie si se usa otro. Las pruebas de mapa existentes necesitan Internet en el teléfono y las de cámara necesitan el teléfono disponible y desbloqueado. En otro computador sin caché de Gradle, omitir `--offline`.
 
 ## Guía detallada en el celular
 

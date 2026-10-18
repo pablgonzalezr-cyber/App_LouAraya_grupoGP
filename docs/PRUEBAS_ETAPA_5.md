@@ -49,7 +49,7 @@ Se inspeccionaron los casos instrumentados antes de ejecutarlos. Las pruebas de 
 
 Los casos nuevos de cámara y mapa no abren bases de datos. La prueba de cámara concede CAMERA mediante GrantPermissionRule y puede dejar ese permiso concedido tras finalizar. Para probar la denegación, cambia únicamente ese permiso desde Ajustes Android; no borres datos ni desinstales.
 
-Se usa `adb install -r` para actualizar ambos APK y se invoca el runner directamente: no se ejecuta una tarea que desinstale la aplicación al terminar. Teléfono físico ADB `R5CY42JVXMT`, Samsung SM-A166M; ningún emulador.
+Se usa `adb install -r` para actualizar ambos APK y se invoca el runner directamente: no se ejecuta una tarea que desinstale la aplicación al terminar. Teléfono físico ADB `SERIAL_SAMSUNG`, Samsung SM-A166M; ningún emulador.
 
 ## Resultados finales
 
@@ -88,9 +88,9 @@ Desde PowerShell en la raíz del proyecto:
 .\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --offline --no-configuration-cache --max-workers=1
 $adbLou = "$env:LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
 & $adbLou devices -l
-& $adbLou -s R5CY42JVXMT install -r app/build/outputs/apk/debug/app-debug.apk
-& $adbLou -s R5CY42JVXMT install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-& $adbLou -s R5CY42JVXMT shell am instrument -w -r com.example.applouaraya_grupogp.test/androidx.test.runner.AndroidJUnitRunner
+& $adbLou -s SERIAL_SAMSUNG install -r app/build/outputs/apk/debug/app-debug.apk
+& $adbLou -s SERIAL_SAMSUNG install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+& $adbLou -s SERIAL_SAMSUNG shell am instrument -w -r com.example.applouaraya_grupogp.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
 Las dependencias ya se descargaron durante esta implementación. En un computador sin caché, omite `--offline` y permite que Gradle acceda a los repositorios configurados. El mapa instrumentado requiere Internet en el teléfono.
