@@ -7,6 +7,13 @@ import com.example.applouaraya_grupogp.model.UsuarioEntity
 
 @Dao
 interface UsuarioDao {
+    @Query("UPDATE usuarios SET nombre = :nombre WHERE id = :id")
+    suspend fun actualizarNombre(id: Long, nombre: String): Int
+    @Query("SELECT * FROM usuarios WHERE id = :id LIMIT 1")
+    suspend fun buscarPorId(id: Long): UsuarioEntity?
+
+    @Query("SELECT * FROM usuarios WHERE id = :id LIMIT 1")
+    fun observarPorId(id: Long): kotlinx.coroutines.flow.Flow<UsuarioEntity?>
 
     @Insert
     suspend fun insertar(usuario: UsuarioEntity): Long

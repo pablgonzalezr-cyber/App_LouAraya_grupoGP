@@ -1,12 +1,12 @@
 
 package com.example.applouaraya_grupogp.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import com.example.applouaraya_grupogp.ui.adaptive.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -24,14 +24,7 @@ fun BienvenidaScreen(
     onComenzar: () -> Unit = {},
     onRegistrarse: () -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Crema)
-            .padding(28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
+    AdaptiveColumn(padding = 28.dp, centered = true) {
 
         Text(
             text = "Lou Araya Macramé",

@@ -10,10 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class FavoritosViewModel(application: Application) : AndroidViewModel(application) {
-    private val repositorio = FavoritosRepository(
-        FavoritosDatabase.obtener(application).favoritoDao()
-    )
+class FavoritosViewModel @JvmOverloads constructor(application: Application,
+    private val repositorio: FavoritosRepository = FavoritosRepository(FavoritosDatabase.obtener(application).favoritoDao())) : AndroidViewModel(application) {
     private val _ids = MutableStateFlow<Set<Int>>(emptySet())
     val ids = _ids.asStateFlow()
     private var usuarioActual: Long? = null

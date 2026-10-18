@@ -8,6 +8,7 @@ data class RegistroUiState(
     val errorNombre: String? = null,
     val errorCorreo: String? = null,
     val errorClave: String? = null,
-    val errorTerminos: String? = null
+    val errorTerminos: String? = null,
+    val resumenDisponible: Boolean = false
 )
 

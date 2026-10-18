@@ -1,11 +1,9 @@
 package com.example.applouaraya_grupogp.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.example.applouaraya_grupogp.ui.adaptive.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -17,18 +15,11 @@ fun RegistroScreen(
     viewModel: RegistroViewModel,
     cargando: Boolean,
     errorGeneral: String?,
-    onRegistrar: (String, String, String) -> Unit
+    onContinuar: () -> Unit
 ) {
     val estado by viewModel.estado.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F1E8))
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
+    AdaptiveColumn {
         Spacer(Modifier.height(20.dp))
 
         Text(
@@ -44,6 +35,7 @@ fun RegistroScreen(
             onValueChange = viewModel::cambiarNombre,
             label = { Text("Nombre") },
             singleLine = true,
+            enabled = !cargando,
             isError = estado.errorNombre != null,
             supportingText = {
                 estado.errorNombre?.let { Text(it) }
@@ -56,6 +48,7 @@ fun RegistroScreen(
             onValueChange = viewModel::cambiarCorreo,
             label = { Text("Correo ficticio") },
             singleLine = true,
+            enabled = !cargando,
             isError = estado.errorCorreo != null,
             supportingText = {
                 estado.errorCorreo?.let { Text(it) }
@@ -69,6 +62,7 @@ fun RegistroScreen(
             label = { Text("Contraseña de prueba") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
+            enabled = !cargando,
             isError = estado.errorClave != null,
             supportingText = {
                 estado.errorClave?.let { Text(it) }
@@ -79,7 +73,8 @@ fun RegistroScreen(
         Row {
             Checkbox(
                 checked = estado.aceptaTerminos,
-                onCheckedChange = viewModel::cambiarTerminos
+                onCheckedChange = viewModel::cambiarTerminos,
+                enabled = !cargando
             )
             Text(
                 "Acepto los términos y condiciones",
@@ -98,11 +93,7 @@ fun RegistroScreen(
         Button(
             onClick = {
                 if (viewModel.validarFormulario()) {
-                    onRegistrar(
-                        estado.nombre,
-                        estado.correo,
-                        estado.clave
-                    )
+                    onContinuar()
                 }
             },
             enabled = !cargando,
@@ -115,7 +106,7 @@ fun RegistroScreen(
         ) {
             Text(
                 if (cargando) "Guardando..."
-                else "Crear cuenta"
+                else "Continuar"
             )
         }
     }
