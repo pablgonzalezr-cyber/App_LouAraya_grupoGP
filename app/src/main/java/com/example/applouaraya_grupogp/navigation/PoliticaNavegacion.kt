@@ -8,7 +8,7 @@ object PoliticaNavegacion {
     fun permite(ruta: String?, usuarioId: Long?, rol: String): Boolean = when {
         ruta in publicas -> true
         usuarioId == null || usuarioId <= 0 -> false
-        ruta == "perfil" -> rol == "CLIENTE" || rol == "ADMINISTRADOR"
+        ruta in setOf("perfil", "avisos") -> rol == "CLIENTE" || rol == "ADMINISTRADOR"
         ruta in admin -> rol == "ADMINISTRADOR"
         ruta in cliente -> rol == "CLIENTE"
         else -> false

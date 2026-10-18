@@ -44,9 +44,13 @@ class ContenidoRepository(private val db: AppDatabase, private val productos: Pr
         require(ContenidoValidator.campania(f).isEmpty()) { "Revisa las fechas y campos de la campaña" }
         val c=CampaniaEntity(f.id,f.titulo.trim(),f.descripcion.trim(),requireNotNull(ContenidoValidator.fecha(f.inicio)).toString(),
             requireNotNull(ContenidoValidator.fecha(f.termino)).toString(),f.publicada,f.activa)
-        if(f.id==0L) db.contenidoDao().insertarCampania(c) else {
+        val id = if(f.id==0L) db.contenidoDao().insertarCampania(c) else {
             check(db.contenidoDao().actualizarCampania(c)==1) { "Campaña no encontrada" }; f.id
         }
+        if(c.activa && c.publicada && c.termino >= LocalDate.now().toString()) {
+            db.avisoDao().campaniaPublicada(id, System.currentTimeMillis())
+        }
+        id
     }
     suspend fun desactivarColeccion(id: Long) = db.withTransaction { productos.exigirAdministrador(); check(db.contenidoDao().desactivarColeccion(id)==1) }
     suspend fun desactivarCampania(id: Long) = db.withTransaction { productos.exigirAdministrador(); check(db.contenidoDao().desactivarCampania(id)==1) }

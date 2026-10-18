@@ -21,7 +21,9 @@ fun DashboardScreen(
     onPerfil: () -> Unit,
     onNovedades: () -> Unit,
     onEscaner: () -> Unit,
-    onMapa: () -> Unit
+    onMapa: () -> Unit,
+    onAvisos: () -> Unit,
+    avisosNoLeidos: Int
 ) {
     Column(
         modifier = Modifier
@@ -88,6 +90,7 @@ fun DashboardScreen(
         OutlinedButton(onClick = onNovedades, modifier = Modifier.fillMaxWidth()) { Text("Colecciones y campañas") }
         OutlinedButton(onClick = onEscaner, modifier = Modifier.fillMaxWidth()) { Text("Escanear QR") }
         OutlinedButton(onClick = onMapa, modifier = Modifier.fillMaxWidth()) { Text("Mapa de ferias y showrooms") }
+        OutlinedButton(onClick = onAvisos, modifier = Modifier.fillMaxWidth()) { Text("Centro de avisos ($avisosNoLeidos sin leer)") }
 
         OutlinedButton(
             onClick = onCerrarSesion,

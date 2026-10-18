@@ -75,6 +75,18 @@ fun PerfilScreen(vm: PerfilViewModel, preferencias: PreferenciasLocales, guardan
                 onCheckedChange = { onPreferencias(preferencias.copy(mostrarAyuda = it)) })
         }
         errorPreferencias?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Text("Avisos de Android", style = MaterialTheme.typography.titleMedium)
+        Text("Silenciar no elimina el historial del centro de avisos.", style = MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Avisos de cotizaciones", Modifier.weight(1f))
+            Switch(checked = preferencias.avisosCotizaciones, enabled = !guardandoPreferencias,
+                onCheckedChange = { onPreferencias(preferencias.copy(avisosCotizaciones = it)) })
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Avisos de campañas", Modifier.weight(1f))
+            Switch(checked = preferencias.avisosCampanias, enabled = !guardandoPreferencias,
+                onCheckedChange = { onPreferencias(preferencias.copy(avisosCampanias = it)) })
+        }
         HorizontalDivider()
         Text("Permisos del dispositivo", style = MaterialTheme.typography.titleLarge, color = Color(0xFF51362B))
         Text("Cámara: ${estadoPermiso(Manifest.permission.CAMERA)}")

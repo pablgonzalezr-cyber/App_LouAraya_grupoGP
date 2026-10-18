@@ -13,10 +13,11 @@ import com.example.applouaraya_grupogp.model.CampaniaEntity
 import com.example.applouaraya_grupogp.repository.ProductosDemo
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.applouaraya_grupogp.model.AvisoEntity
 
 @Database(
-    entities = [UsuarioEntity::class, CotizacionEntity::class, Producto::class, ColeccionEntity::class, ColeccionProducto::class, CampaniaEntity::class],
-    version = 5,
+    entities = [UsuarioEntity::class, CotizacionEntity::class, Producto::class, ColeccionEntity::class, ColeccionProducto::class, CampaniaEntity::class, AvisoEntity::class],
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,8 +26,16 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cotizacionDao(): CotizacionDao
     abstract fun productoDao(): ProductoDao
     abstract fun contenidoDao(): ContenidoDao
+    abstract fun avisoDao(): AvisoDao
 
     companion object {
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS avisos (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, usuarioId INTEGER NOT NULL, tipo TEXT NOT NULL, titulo TEXT NOT NULL, mensaje TEXT NOT NULL, referenciaId INTEGER NOT NULL, claveEvento TEXT NOT NULL, creadaEn INTEGER NOT NULL, leida INTEGER NOT NULL, FOREIGN KEY(usuarioId) REFERENCES usuarios(id) ON UPDATE NO ACTION ON DELETE NO ACTION)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_avisos_usuarioId ON avisos(usuarioId)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_avisos_usuarioId_claveEvento ON avisos(usuarioId,claveEvento)")
+            }
+        }
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS colecciones (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, nombre TEXT NOT NULL, descripcion TEXT NOT NULL, activa INTEGER NOT NULL, publicada INTEGER NOT NULL)")
@@ -69,7 +78,7 @@ abstract class AppDatabase : RoomDatabase() {
         }
         @Volatile
         private var INSTANCIA: AppDatabase? = null
-        val MIGRACIONES: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+        val MIGRACIONES: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 
         fun obtener(context: Context): AppDatabase {
             return INSTANCIA ?: synchronized(this) {

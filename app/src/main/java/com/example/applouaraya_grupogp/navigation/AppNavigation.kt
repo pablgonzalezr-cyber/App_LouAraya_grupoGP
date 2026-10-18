@@ -16,10 +16,15 @@ import com.example.applouaraya_grupogp.data.AppDatabase
 import com.example.applouaraya_grupogp.repository.*
 import com.example.applouaraya_grupogp.viewmodel.*
 import com.example.applouaraya_grupogp.ui.screens.*
+import com.example.applouaraya_grupogp.notifications.NotificacionesLocales
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: PreferenciasRepository? = null,
-    controlador: NavHostController = rememberNavController(), favoritosPrueba: FavoritosRepository? = null) {
+    controlador: NavHostController = rememberNavController(), favoritosPrueba: FavoritosRepository? = null,
+    abrirCentro: Boolean = false, centroConsumido: () -> Unit = {}) {
     val contexto = LocalContext.current.applicationContext
     val db = remember(contexto, basePrueba) { basePrueba ?: AppDatabase.obtener(contexto) }
     val nav = controlador
@@ -31,8 +36,31 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
     val productosRepo = remember(db, sesionVm) { ProductosRepository(db) { sesionVm.estado.value.usuarioId } }
     val contenidoRepo = remember(db, productosRepo) { ContenidoRepository(db, productosRepo) }
     val sesion by sesionVm.estado.collectAsState()
+    val preferenciasRepo = remember(contexto, preferenciasPrueba) {
+        preferenciasPrueba ?: PreferenciasRepository(contexto.getSharedPreferences("lou_preferencias", Context.MODE_PRIVATE))
+    }
+    val avisosFactory = remember(db, sesionVm, preferenciasRepo) { viewModelFactory {
+        initializer { AvisosViewModel(AvisosRepository(db) { sesionVm.estado.value.usuarioId }, preferenciasRepo, sesionVm.estado) }
+    } }
+    val avisosVm: AvisosViewModel = viewModel(factory = avisosFactory)
+    val avisosActuales by avisosVm.estado.collectAsState()
+    // Nunca renderizar estado conservado de la cuenta anterior mientras se reinician los Flows.
+    val avisos = if(avisosActuales.usuarioId == sesion.usuarioId) avisosActuales else AvisosUiState(usuarioId = sesion.usuarioId)
+    val notificaciones = remember(contexto) { NotificacionesLocales(contexto) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var revisionPermiso by remember { mutableIntStateOf(0) }
+    val permitido = remember(revisionPermiso) { notificaciones.permitido() }
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, e -> if(e == Lifecycle.Event.ON_RESUME) revisionPermiso++ }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); if(basePrueba == null) notificaciones.cancelar() }
+    }
+    LaunchedEffect(avisos, sesion.usuarioId, revisionPermiso) {
+        // Las pantallas de pruebas con Room inyectado no publican ni cancelan alertas reales.
+        if(basePrueba == null) notificaciones.actualizar(sesion.usuarioId, avisos.avisos, avisos.preferencias)
+    }
     val configFactory = remember(contexto, preferenciasPrueba, sesionVm) { viewModelFactory {
-        initializer { ConfiguracionViewModel(preferenciasPrueba ?: PreferenciasRepository(contexto.getSharedPreferences("lou_preferencias", Context.MODE_PRIVATE)), sesionVm.estado) }
+        initializer { ConfiguracionViewModel(preferenciasRepo, sesionVm.estado) }
     } }
     val configVm: ConfiguracionViewModel = viewModel(factory = configFactory)
     val config by configVm.estado.collectAsState()
@@ -44,6 +72,7 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
         nav.navigate(destino) { popUpTo(nav.graph.id) { inclusive = true }; launchSingleTop = true }
     }
     fun salir(destino: String) {
+        if(basePrueba == null) notificaciones.cancelar()
         registro.limpiarFormulario()
         sesionVm.cerrarSesion()
         salida = null
@@ -53,6 +82,13 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
         if (config.preferencias.confirmarSalida) salida = destino else salir(destino)
     }
     fun abrir(destino: String) { nav.navigate(destino) { launchSingleTop = true } }
+    LaunchedEffect(abrirCentro, sesion.usuarioId, ruta) {
+        // El PendingIntent no contiene destinatario ni ruta privada. Tras autenticar,
+        // siempre abre exclusivamente el centro de la sesión actual.
+        if(abrirCentro && sesion.usuarioId != null && PoliticaNavegacion.permite("avisos", sesion.usuarioId, sesion.rol) && ruta !in setOf(null, "login", "registro", "bienvenida")) {
+            abrir("avisos"); centroConsumido()
+        }
+    }
 
     // Protege el contenido y corrige destinos privados restaurados sin sesión.
     LaunchedEffect(sesion.usuarioId, sesion.rol, ruta) {
@@ -74,7 +110,14 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
         composable("dashboard") { RutaPrivada("dashboard", sesion) {
             DashboardScreen(sesion.nombre, onCatalogo = { abrir("catalogo") }, onCerrarSesion = { pedirSalida("bienvenida") },
                 onCotizacion = { abrir("cotizacion") }, onHistorial = { abrir("solicitudes") },
-                onFavoritos = { abrir("favoritos") }, onPerfil = { abrir("perfil") }, onNovedades = { abrir("novedades") }, onEscaner = { abrir("escaner") }, onMapa = { abrir("mapa") })
+                onFavoritos = { abrir("favoritos") }, onPerfil = { abrir("perfil") }, onNovedades = { abrir("novedades") }, onEscaner = { abrir("escaner") }, onMapa = { abrir("mapa") },
+                onAvisos = { abrir("avisos") }, avisosNoLeidos = avisos.noLeidas)
+        } }
+        composable("avisos") { RutaPrivada("avisos", sesion) {
+            AvisosScreen(avisos, permitido, onRevisarPermiso = { revisionPermiso++ }, onVolver = { nav.popBackStack() },
+                onLeida = avisosVm::leida, onAbrir = { id -> avisosVm.abrir(id) { destino ->
+                    if(PoliticaNavegacion.permite(destino.replace(Regex("/[0-9]+$"), "/{id}"), sesionVm.estado.value.usuarioId, sesionVm.estado.value.rol)) abrir(destino)
+                } })
         } }
         composable("perfil") { RutaPrivada("perfil", sesion) {
             val factory = remember(db, sesionVm) { viewModelFactory {
@@ -131,12 +174,18 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
             HistorialCotizacionesScreen(id, onVolver = { nav.popBackStack() }, onAbrir = { abrir("solicitud/$it") })
         } }
         composable("solicitud/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
-            RutaPrivada("solicitud/{id}", sesion) { id -> DetalleCotizacionScreen(id, e.arguments?.getLong("id") ?: -1, onVolver = { nav.popBackStack() }) }
+            RutaPrivada("solicitud/{id}", sesion) { id ->
+                val factory = remember(db, contexto) { viewModelFactory {
+                    initializer { HistorialCotizacionesViewModel(contexto as Application, CotizacionRepository(db.cotizacionDao())) }
+                } }
+                val vm: HistorialCotizacionesViewModel = viewModel(factory = factory)
+                DetalleCotizacionScreen(id, e.arguments?.getLong("id") ?: -1, onVolver = { nav.popBackStack() }, vm = vm)
+            }
         }
         composable("admin") { RutaPrivada("admin", sesion) {
             AdminConPermiso(db, sesionVm) { vm -> AdminDashboardScreen(vm, onSolicitudes = { abrir("admin/solicitudes") },
                 onCerrarSesion = { pedirSalida("bienvenida") }, onPerfil = { abrir("perfil") }, onProductos = { abrir("admin/productos") },
-                onContenido = { abrir("admin/contenido") }) }
+                onContenido = { abrir("admin/contenido") }, onAvisos = { abrir("avisos") }, avisosNoLeidos = avisos.noLeidas) }
         } }
         composable("admin/solicitudes") { RutaPrivada("admin/solicitudes", sesion) {
             AdminConPermiso(db, sesionVm) { vm -> AdminSolicitudesScreen(vm, onVolver = { nav.popBackStack() }, onAbrir = { abrir("admin/solicitud/$it") }) }

@@ -19,8 +19,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun DetalleCotizacionScreen(usuarioId: Long, id: Long, onVolver: () -> Unit) {
-    val vm: HistorialCotizacionesViewModel = viewModel()
+fun DetalleCotizacionScreen(usuarioId: Long, id: Long, onVolver: () -> Unit, vm: HistorialCotizacionesViewModel = viewModel()) {
     var solicitud by remember(usuarioId, id) { mutableStateOf<CotizacionEntity?>(null) }
     var cargando by remember(usuarioId, id) { mutableStateOf(true) }
     var error by remember(usuarioId, id) { mutableStateOf(false) }

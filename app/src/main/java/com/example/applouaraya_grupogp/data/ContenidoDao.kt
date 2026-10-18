@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ContenidoDao {
+    @Query("SELECT * FROM campanias WHERE id=:id") suspend fun buscarCampania(id: Long): CampaniaEntity?
     @Query("SELECT * FROM colecciones WHERE activa=1 AND publicada=1 ORDER BY id DESC")
     fun coleccionesPublicadas(): Flow<List<ColeccionEntity>>
     @Query("SELECT cp.coleccionId, p.* FROM coleccion_productos cp JOIN productos p ON p.id=cp.productoId JOIN colecciones c ON c.id=cp.coleccionId WHERE c.activa=1 AND c.publicada=1 AND p.activo=1 ORDER BY p.id")
