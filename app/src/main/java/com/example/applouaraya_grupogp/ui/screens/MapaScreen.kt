@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.example.applouaraya_grupogp.ui.design.*
 import com.example.applouaraya_grupogp.repository.PuntosDemostracion
 import com.example.applouaraya_grupogp.ui.components.MapaInteractivo
 import com.example.applouaraya_grupogp.viewmodel.MapaViewModel
