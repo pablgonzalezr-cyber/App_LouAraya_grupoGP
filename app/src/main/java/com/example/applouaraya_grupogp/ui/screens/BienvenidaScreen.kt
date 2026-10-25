@@ -1,84 +1,63 @@
-
 package com.example.applouaraya_grupogp.ui.screens
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import com.example.applouaraya_grupogp.ui.adaptive.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-
-// Colores iniciales de Lou Araya Macramé
-private val Crema = Color(0xFFF7F1E8)
-private val Cafe = Color(0xFF51362B)
-private val Terracota = Color(0xFFA65E43)
+import com.example.applouaraya_grupogp.R
+import com.example.applouaraya_grupogp.ui.adaptive.AdaptiveColumn
+import com.example.applouaraya_grupogp.ui.design.*
 
 @Composable
-fun BienvenidaScreen(
-    onComenzar: () -> Unit = {},
-    onRegistrarse: () -> Unit = {}
-) {
-    AdaptiveColumn(padding = 28.dp, centered = true) {
-
-        Text(
-            text = "Lou Araya Macramé",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = Cafe,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "Arte tejido a mano, creado para transformar tus espacios.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = Cafe,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Button(
-            onClick = onComenzar,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Terracota
-            )
-        ) {
-            Text("Comenzar")
+fun BienvenidaScreen(onComenzar: () -> Unit = {}, onRegistrarse: () -> Unit = {}) {
+    AdaptiveColumn(padding = 22.dp, centered = false, spacing = 16.dp) {
+        Spacer(Modifier.height(4.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center) {
+            LouBrandMark()
         }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        OutlinedButton(
-            onClick = onRegistrarse,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Terracota
-            )
-        ) {
-            Text("Crear una cuenta")
+        Text("Lou Araya\nMacramé", modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
+            color = LouColors.Cafe, textAlign = TextAlign.Center, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified)
+        Text("Arte en fibras que decora tus historias", Modifier.fillMaxWidth(),
+            color = LouColors.TextoSecundario, textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge)
+        Image(painter = painterResource(R.drawable.macrame_tapiz),
+            contentDescription = "Tapiz artesanal de Lou Araya Macramé",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(24.dp)))
+        LouPrimaryButton("Comenzar", onComenzar, Modifier.fillMaxWidth())
+        OutlinedButton(onClick = onRegistrarse, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            shape = RoundedCornerShape(15.dp)) { Text("Crear una cuenta") }
+        LouPanel(Modifier.fillMaxWidth()) {
+            Text("Hecho con dedicación", color = LouColors.Cafe,
+                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("Diseños artesanales únicos · Para hogares y celebraciones · Piezas personalizadas",
+                color = LouColors.TextoSecundario)
         }
+        Spacer(Modifier.height(8.dp))
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun BienvenidaScreenPreview() {
-    MaterialTheme {
+fun BienvenidaScreenPreview() { AppLouPreviewContent() }
+
+@Composable
+private fun AppLouPreviewContent() {
+    com.example.applouaraya_grupogp.ui.theme.AppLouAraya_grupoGPTheme {
         BienvenidaScreen()
     }
 }

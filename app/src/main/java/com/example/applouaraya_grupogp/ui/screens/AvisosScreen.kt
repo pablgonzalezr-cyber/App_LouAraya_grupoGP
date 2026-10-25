@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.applouaraya_grupogp.ui.design.*
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -23,7 +24,7 @@ import com.example.applouaraya_grupogp.viewmodel.AvisosUiState
 
 @Composable
 fun AvisosScreen(estado: AvisosUiState, permitido: Boolean, onRevisarPermiso: () -> Unit,
-    onVolver: () -> Unit, onLeida: (Long) -> Unit, onAbrir: (Long) -> Unit) {
+                 onVolver: () -> Unit, onLeida: (Long) -> Unit, onAbrir: (Long) -> Unit) {
     val contexto = LocalContext.current
     var mensaje by remember { mutableStateOf<String?>(null) }
     val permiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -31,8 +32,8 @@ fun AvisosScreen(estado: AvisosUiState, permitido: Boolean, onRevisarPermiso: ()
         mensaje = if(it) "Permiso concedido" else "Permiso no concedido. Tus avisos siguen disponibles aquí."
     }
     Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(onClick = onVolver) { Text("← Volver") }
-        Text("Centro de avisos", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF51362B))
+        LouBackButton(onVolver)
+        LouPageHeading("Centro de avisos", "Novedades y cambios en tus solicitudes")
         Text("No leídas: ${estado.noLeidas}")
         Text("Avisos locales de esta cuenta. No hay notificaciones push entre dispositivos.", style = MaterialTheme.typography.bodySmall)
         Text(if(permitido) "Avisos de Android permitidos; revisa también los canales en Ajustes." else "Avisos de Android desactivados; el centro sigue funcionando.", style = MaterialTheme.typography.bodySmall)
@@ -50,7 +51,7 @@ fun AvisosScreen(estado: AvisosUiState, permitido: Boolean, onRevisarPermiso: ()
         if(!estado.cargando && estado.avisos.isEmpty()) Text("Todavía no tienes avisos.")
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(estado.avisos, key = { it.id }) { aviso ->
-                Card(colors = CardDefaults.cardColors(containerColor = if(aviso.leida) Color(0xFFFFFBF5) else Color(0xFFE9D8C6))) {
+                Card(colors = CardDefaults.cardColors(containerColor = if(aviso.leida) LouColors.Superficie else LouColors.ArenaClara)) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(aviso.titulo, style = MaterialTheme.typography.titleMedium)
                         Text(aviso.mensaje)
