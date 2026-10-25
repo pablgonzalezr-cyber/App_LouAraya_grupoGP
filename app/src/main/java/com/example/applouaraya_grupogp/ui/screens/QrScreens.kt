@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.applouaraya_grupogp.ui.design.*
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -55,7 +56,7 @@ fun QrScannerScreen(vm: QrViewModel, onVolver: () -> Unit, onProducto: (Int) -> 
     LaunchedEffect(estado.productoId) { estado.productoId?.let(onProducto) }
     Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         TextButton(onClick = onVolver) { Text("← Volver") }
-        Text("Escanear QR", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF51362B))
+        LouPageHeading("Escanear QR", "Descubre el diseño que tienes frente a ti")
         Text("Apunta la cámara a un QR de producto Lou Araya. La lectura y consulta se realizan en este teléfono.")
         if(!permiso) {
             Text(if(denegado) "Permiso de cámara no concedido. Puedes intentarlo otra vez o habilitarlo en Ajustes." else "Necesitamos permiso de cámara solo para usar este escáner.")
@@ -109,7 +110,7 @@ fun QrDemoScreen(vm: QrDemoViewModel, onVolver: () -> Unit) {
     }
     Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         TextButton(onClick = onVolver) { Text("← Volver") }
-        Text("QR de demostración", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF51362B))
+        LouPageHeading("QR de demostración", "Comparte y prueba códigos de productos")
         Text("Este QR identifica un producto local. Muestra la imagen en otro dispositivo o guárdala para abrirla en una pantalla.")
         if(estado.cargando) CircularProgressIndicator()
         estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

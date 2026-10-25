@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.applouaraya_grupogp.ui.design.*
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -24,8 +25,8 @@ import com.example.applouaraya_grupogp.viewmodel.PerfilViewModel
 
 @Composable
 fun PerfilScreen(vm: PerfilViewModel, preferencias: PreferenciasLocales, guardandoPreferencias: Boolean,
-    errorPreferencias: String?, onPreferencias: (PreferenciasLocales) -> Unit,
-    onVolver: () -> Unit, onCerrarSesion: () -> Unit, onCambiarUsuario: () -> Unit) {
+                 errorPreferencias: String?, onPreferencias: (PreferenciasLocales) -> Unit,
+                 onVolver: () -> Unit, onCerrarSesion: () -> Unit, onCambiarUsuario: () -> Unit) {
     val estado by vm.estado.collectAsState()
     val contexto = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -45,8 +46,8 @@ fun PerfilScreen(vm: PerfilViewModel, preferencias: PreferenciasLocales, guardan
     }
     Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding()
         .verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        TextButton(onClick = onVolver) { Text("← Inicio") }
-        Text("Mi perfil", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF51362B))
+        LouBackButton(onVolver, "← Inicio")
+        LouPageHeading("Mi perfil", "Gestiona tu cuenta y preferencias")
         if (estado.cargando) CircularProgressIndicator()
         if (!estado.cargando) {
             Text("Correo: ${estado.correo}")
