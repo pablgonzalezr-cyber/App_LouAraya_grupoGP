@@ -3,6 +3,10 @@ package com.example.applouaraya_grupogp.navigation
 import android.app.Application
 import android.content.Context
 import androidx.compose.material3.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.example.applouaraya_grupogp.ui.design.LouColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,8 +27,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: PreferenciasRepository? = null,
-    controlador: NavHostController = rememberNavController(), favoritosPrueba: FavoritosRepository? = null,
-    abrirCentro: Boolean = false, centroConsumido: () -> Unit = {}) {
+                  controlador: NavHostController = rememberNavController(), favoritosPrueba: FavoritosRepository? = null,
+                  abrirCentro: Boolean = false, centroConsumido: () -> Unit = {}) {
     val contexto = LocalContext.current.applicationContext
     val db = remember(contexto, basePrueba) { basePrueba ?: AppDatabase.obtener(contexto) }
     val nav = controlador
@@ -106,115 +110,148 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
             reemplazar(if (sesion.usuarioId == null) "login" else PoliticaNavegacion.inicio(sesion.rol))
         }
     }
-    NavHost(navController = nav, startDestination = "bienvenida") {
-        composable("bienvenida") { BienvenidaScreen(onComenzar = { sesionVm.limpiarError(); abrir("login") }, onRegistrarse = { sesionVm.limpiarError(); abrir("registro") }) }
-        composable("login") { LoginScreen(sesion.cargando, sesion.error,
-            onIngresar = sesionVm::iniciarSesion, onRegistrarse = { sesionVm.limpiarError(); abrir("registro") }) }
-        composable("registro") { RegistroScreen(registro, sesion.cargando, sesion.error, onContinuar = {
-            sesionVm.limpiarError()
-            abrir("resumen")
-        }) }
-        composable("resumen") {
-            if(sesion.usuarioId == null && formularioRegistro.resumenDisponible) {
-                ResumenScreen(registro, sesion.cargando, sesion.error, onEditar = {
-                    if(!sesionVm.estado.value.cargando) {
-                        sesionVm.limpiarError()
-                        nav.popBackStack()
-                        registro.volverAEditar()
+    // Barra inferior visual para las pantallas principales del cliente.
+    // No cambia rutas ni autorizaciones; respeta la navegación MVVM existente.
+    val rutasConBarra = setOf("dashboard", "catalogo", "favoritos", "solicitudes", "perfil")
+    Scaffold(
+        containerColor = LouColors.Fondo,
+        bottomBar = {
+            if (sesion.usuarioId != null && sesion.rol == "CLIENTE" && ruta in rutasConBarra) {
+                NavigationBar(containerColor = LouColors.Superficie, tonalElevation = 5.dp) {
+                    listOf(
+                        Triple("⌂", "Inicio", "dashboard"),
+                        Triple("▦", "Catálogo", "catalogo"),
+                        Triple("♡", "Favoritos", "favoritos"),
+                        Triple("≡", "Solicitudes", "solicitudes"),
+                        Triple("◉", "Perfil", "perfil")
+                    ).forEach { (icono, etiqueta, destino) ->
+                        NavigationBarItem(
+                            selected = ruta == destino,
+                            onClick = { if (ruta != destino) abrir(destino) },
+                            icon = { Text(icono, color = if (ruta == destino) LouColors.Terracota else LouColors.Cafe) },
+                            label = { Text(etiqueta) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = LouColors.Terracota,
+                                selectedTextColor = LouColors.Terracota,
+                                indicatorColor = LouColors.ArenaClara)
+                        )
                     }
-                }, onConfirmar = {
-                    // La credencial permanece en el ViewModel; nunca viaja en rutas.
-                    val datos = registro.estado.value
-                    if(datos.resumenDisponible) sesionVm.registrar(datos.nombre, datos.correo, datos.clave)
-                })
+                }
             }
         }
-        composable("dashboard") { RutaPrivada("dashboard", sesion) {
-            DashboardScreen(sesion.nombre, onCatalogo = { abrir("catalogo") }, onCerrarSesion = { pedirSalida("bienvenida") },
-                onCotizacion = { abrir("cotizacion") }, onHistorial = { abrir("solicitudes") },
-                onFavoritos = { abrir("favoritos") }, onPerfil = { abrir("perfil") }, onNovedades = { abrir("novedades") }, onEscaner = { abrir("escaner") }, onMapa = { abrir("mapa") },
-                onAvisos = { abrir("avisos") }, avisosNoLeidos = avisos.noLeidas)
-        } }
-        composable("avisos") { RutaPrivada("avisos", sesion) {
-            AvisosScreen(avisos, permitido, onRevisarPermiso = { revisionPermiso++ }, onVolver = { nav.popBackStack() },
-                onLeida = avisosVm::leida, onAbrir = { id -> avisosVm.abrir(id) { destino ->
-                    if(PoliticaNavegacion.permite(destino.replace(Regex("/[0-9]+$"), "/{id}"), sesionVm.estado.value.usuarioId, sesionVm.estado.value.rol)) abrir(destino)
-                } })
-        } }
-        composable("perfil") { RutaPrivada("perfil", sesion) {
-            val factory = remember(db, sesionVm) { viewModelFactory {
-                initializer { PerfilViewModel(PerfilRepository(db.usuarioDao()) { sesionVm.estado.value.usuarioId }) }
-            } }
-            val vm: PerfilViewModel = viewModel(factory = factory)
-            PerfilScreen(vm, config.preferencias, config.guardando, config.error, configVm::guardar,
-                onVolver = { nav.popBackStack() }, onCerrarSesion = { pedirSalida("bienvenida") }, onCambiarUsuario = { pedirSalida("login") })
-        } }
-        composable("catalogo") { RutaPrivada("catalogo", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
-        composable("escaner") { RutaPrivada("escaner", sesion) {
-            val factory = remember(db) { viewModelFactory { initializer { QrViewModel(QrRepository(db.productoDao())) } } }
-            val vm: QrViewModel = viewModel(factory = factory)
-            QrScannerScreen(vm, onVolver = { nav.popBackStack() }, onProducto = { id ->
-                nav.navigate("producto/$id") { popUpTo("escaner") { inclusive = true }; launchSingleTop = true }
-            }, onDemo = { abrir("qr-demo") })
-        } }
-        composable("qr-demo") { RutaPrivada("qr-demo", sesion) {
-            val factory = remember(productosRepo) { viewModelFactory { initializer { QrDemoViewModel(productosRepo) } } }
-            val vm: QrDemoViewModel = viewModel(factory = factory)
-            QrDemoScreen(vm, onVolver = { nav.popBackStack() })
-        } }
-        composable("mapa") { RutaPrivada("mapa", sesion) {
-            val vm: MapaViewModel = viewModel()
-            MapaScreen(vm, onVolver = { nav.popBackStack() })
-        } }
-        composable("favoritos") { RutaPrivada("favoritos", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, abrirFavoritos = true, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
-        composable("admin/productos") { RutaPrivada("admin/productos", sesion) {
-            val factory = remember(productosRepo) { viewModelFactory { initializer { AdminProductosViewModel(productosRepo) } } }
-            val vm: AdminProductosViewModel = viewModel(factory = factory)
-            AdminProductosScreen(vm, onVolver = { nav.popBackStack() })
-        } }
-        composable("admin/contenido") { RutaPrivada("admin/contenido", sesion) {
-            val factory = remember(contenidoRepo) { viewModelFactory { initializer { AdminContenidoViewModel(contenidoRepo) } } }
-            val vm: AdminContenidoViewModel = viewModel(factory = factory)
-            AdminContenidoScreen(vm, onVolver = { nav.popBackStack() })
-        } }
-        composable("novedades") { RutaPrivada("novedades", sesion) {
-            val factory = remember(contenidoRepo) { viewModelFactory { initializer { NovedadesViewModel(contenidoRepo) } } }
-            val vm: NovedadesViewModel = viewModel(factory = factory)
-            NovedadesScreen(vm, onVolver = { nav.popBackStack() }, onProducto = { abrir("producto/$it") })
-        } }
-        composable("producto/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
-            RutaPrivada("producto/{id}", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id,
-                repositorio = productosRepo, productoInicial = e.arguments?.getInt("id"), repositorioFavoritos = favoritosPrueba) }
-        }
-        composable("cotizacion") { RutaPrivada("cotizacion", sesion) { id ->
-            CotizacionScreen(id, onVolver = { nav.popBackStack() }, onGuardada = { solicitudId ->
-                nav.navigate("solicitudes") { popUpTo("cotizacion") { inclusive = true }; launchSingleTop = true }
-                abrir("solicitud/$solicitudId")
-            }, mostrarAyuda = config.preferencias.mostrarAyuda)
-        } }
-        composable("solicitudes") { RutaPrivada("solicitudes", sesion) { id ->
-            HistorialCotizacionesScreen(id, onVolver = { nav.popBackStack() }, onAbrir = { abrir("solicitud/$it") })
-        } }
-        composable("solicitud/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
-            RutaPrivada("solicitud/{id}", sesion) { id ->
-                val factory = remember(db, contexto) { viewModelFactory {
-                    initializer { HistorialCotizacionesViewModel(contexto as Application, CotizacionRepository(db.cotizacionDao())) }
+    ) { contenidoPadding ->
+        Box(Modifier.padding(contenidoPadding)) {
+            NavHost(navController = nav, startDestination = "bienvenida") {
+                composable("bienvenida") { BienvenidaScreen(onComenzar = { sesionVm.limpiarError(); abrir("login") }, onRegistrarse = { sesionVm.limpiarError(); abrir("registro") }) }
+                composable("login") { LoginScreen(sesion.cargando, sesion.error,
+                    onIngresar = sesionVm::iniciarSesion, onRegistrarse = { sesionVm.limpiarError(); abrir("registro") }) }
+                composable("registro") { RegistroScreen(registro, sesion.cargando, sesion.error, onContinuar = {
+                    sesionVm.limpiarError()
+                    abrir("resumen")
+                }) }
+                composable("resumen") {
+                    if(sesion.usuarioId == null && formularioRegistro.resumenDisponible) {
+                        ResumenScreen(registro, sesion.cargando, sesion.error, onEditar = {
+                            if(!sesionVm.estado.value.cargando) {
+                                sesionVm.limpiarError()
+                                nav.popBackStack()
+                                registro.volverAEditar()
+                            }
+                        }, onConfirmar = {
+                            // La credencial permanece en el ViewModel; nunca viaja en rutas.
+                            val datos = registro.estado.value
+                            if(datos.resumenDisponible) sesionVm.registrar(datos.nombre, datos.correo, datos.clave)
+                        })
+                    }
+                }
+                composable("dashboard") { RutaPrivada("dashboard", sesion) {
+                    DashboardScreen(sesion.nombre, onCatalogo = { abrir("catalogo") }, onCerrarSesion = { pedirSalida("bienvenida") },
+                        onCotizacion = { abrir("cotizacion") }, onHistorial = { abrir("solicitudes") },
+                        onFavoritos = { abrir("favoritos") }, onPerfil = { abrir("perfil") }, onNovedades = { abrir("novedades") }, onEscaner = { abrir("escaner") }, onMapa = { abrir("mapa") },
+                        onAvisos = { abrir("avisos") }, avisosNoLeidos = avisos.noLeidas)
                 } }
-                val vm: HistorialCotizacionesViewModel = viewModel(factory = factory)
-                DetalleCotizacionScreen(id, e.arguments?.getLong("id") ?: -1, onVolver = { nav.popBackStack() }, vm = vm)
-            }
-        }
-        composable("admin") { RutaPrivada("admin", sesion) {
-            AdminConPermiso(db, sesionVm) { vm -> AdminDashboardScreen(vm, onSolicitudes = { abrir("admin/solicitudes") },
-                onCerrarSesion = { pedirSalida("bienvenida") }, onPerfil = { abrir("perfil") }, onProductos = { abrir("admin/productos") },
-                onContenido = { abrir("admin/contenido") }, onAvisos = { abrir("avisos") }, avisosNoLeidos = avisos.noLeidas) }
-        } }
-        composable("admin/solicitudes") { RutaPrivada("admin/solicitudes", sesion) {
-            AdminConPermiso(db, sesionVm) { vm -> AdminSolicitudesScreen(vm, onVolver = { nav.popBackStack() }, onAbrir = { abrir("admin/solicitud/$it") }) }
-        } }
-        composable("admin/solicitud/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
-            RutaPrivada("admin/solicitud/{id}", sesion) {
-                AdminConPermiso(db, sesionVm) { vm -> AdminDetalleSolicitudScreen(vm, e.arguments?.getLong("id") ?: -1, onVolver = { nav.popBackStack() }) }
+                composable("avisos") { RutaPrivada("avisos", sesion) {
+                    AvisosScreen(avisos, permitido, onRevisarPermiso = { revisionPermiso++ }, onVolver = { nav.popBackStack() },
+                        onLeida = avisosVm::leida, onAbrir = { id -> avisosVm.abrir(id) { destino ->
+                            if(PoliticaNavegacion.permite(destino.replace(Regex("/[0-9]+$"), "/{id}"), sesionVm.estado.value.usuarioId, sesionVm.estado.value.rol)) abrir(destino)
+                        } })
+                } }
+                composable("perfil") { RutaPrivada("perfil", sesion) {
+                    val factory = remember(db, sesionVm) { viewModelFactory {
+                        initializer { PerfilViewModel(PerfilRepository(db.usuarioDao()) { sesionVm.estado.value.usuarioId }) }
+                    } }
+                    val vm: PerfilViewModel = viewModel(factory = factory)
+                    PerfilScreen(vm, config.preferencias, config.guardando, config.error, configVm::guardar,
+                        onVolver = { nav.popBackStack() }, onCerrarSesion = { pedirSalida("bienvenida") }, onCambiarUsuario = { pedirSalida("login") })
+                } }
+                composable("catalogo") { RutaPrivada("catalogo", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
+                composable("escaner") { RutaPrivada("escaner", sesion) {
+                    val factory = remember(db) { viewModelFactory { initializer { QrViewModel(QrRepository(db.productoDao())) } } }
+                    val vm: QrViewModel = viewModel(factory = factory)
+                    QrScannerScreen(vm, onVolver = { nav.popBackStack() }, onProducto = { id ->
+                        nav.navigate("producto/$id") { popUpTo("escaner") { inclusive = true }; launchSingleTop = true }
+                    }, onDemo = { abrir("qr-demo") })
+                } }
+                composable("qr-demo") { RutaPrivada("qr-demo", sesion) {
+                    val factory = remember(productosRepo) { viewModelFactory { initializer { QrDemoViewModel(productosRepo) } } }
+                    val vm: QrDemoViewModel = viewModel(factory = factory)
+                    QrDemoScreen(vm, onVolver = { nav.popBackStack() })
+                } }
+                composable("mapa") { RutaPrivada("mapa", sesion) {
+                    val vm: MapaViewModel = viewModel()
+                    MapaScreen(vm, onVolver = { nav.popBackStack() })
+                } }
+                composable("favoritos") { RutaPrivada("favoritos", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, abrirFavoritos = true, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
+                composable("admin/productos") { RutaPrivada("admin/productos", sesion) {
+                    val factory = remember(productosRepo) { viewModelFactory { initializer { AdminProductosViewModel(productosRepo) } } }
+                    val vm: AdminProductosViewModel = viewModel(factory = factory)
+                    AdminProductosScreen(vm, onVolver = { nav.popBackStack() })
+                } }
+                composable("admin/contenido") { RutaPrivada("admin/contenido", sesion) {
+                    val factory = remember(contenidoRepo) { viewModelFactory { initializer { AdminContenidoViewModel(contenidoRepo) } } }
+                    val vm: AdminContenidoViewModel = viewModel(factory = factory)
+                    AdminContenidoScreen(vm, onVolver = { nav.popBackStack() })
+                } }
+                composable("novedades") { RutaPrivada("novedades", sesion) {
+                    val factory = remember(contenidoRepo) { viewModelFactory { initializer { NovedadesViewModel(contenidoRepo) } } }
+                    val vm: NovedadesViewModel = viewModel(factory = factory)
+                    NovedadesScreen(vm, onVolver = { nav.popBackStack() }, onProducto = { abrir("producto/$it") })
+                } }
+                composable("producto/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
+                    RutaPrivada("producto/{id}", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id,
+                        repositorio = productosRepo, productoInicial = e.arguments?.getInt("id"), repositorioFavoritos = favoritosPrueba) }
+                }
+                composable("cotizacion") { RutaPrivada("cotizacion", sesion) { id ->
+                    CotizacionScreen(id, onVolver = { nav.popBackStack() }, onGuardada = { solicitudId ->
+                        nav.navigate("solicitudes") { popUpTo("cotizacion") { inclusive = true }; launchSingleTop = true }
+                        abrir("solicitud/$solicitudId")
+                    }, mostrarAyuda = config.preferencias.mostrarAyuda)
+                } }
+                composable("solicitudes") { RutaPrivada("solicitudes", sesion) { id ->
+                    HistorialCotizacionesScreen(id, onVolver = { nav.popBackStack() }, onAbrir = { abrir("solicitud/$it") })
+                } }
+                composable("solicitud/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
+                    RutaPrivada("solicitud/{id}", sesion) { id ->
+                        val factory = remember(db, contexto) { viewModelFactory {
+                            initializer { HistorialCotizacionesViewModel(contexto as Application, CotizacionRepository(db.cotizacionDao())) }
+                        } }
+                        val vm: HistorialCotizacionesViewModel = viewModel(factory = factory)
+                        DetalleCotizacionScreen(id, e.arguments?.getLong("id") ?: -1, onVolver = { nav.popBackStack() }, vm = vm)
+                    }
+                }
+                composable("admin") { RutaPrivada("admin", sesion) {
+                    AdminConPermiso(db, sesionVm) { vm -> AdminDashboardScreen(vm, onSolicitudes = { abrir("admin/solicitudes") },
+                        onCerrarSesion = { pedirSalida("bienvenida") }, onPerfil = { abrir("perfil") }, onProductos = { abrir("admin/productos") },
+                        onContenido = { abrir("admin/contenido") }, onAvisos = { abrir("avisos") }, avisosNoLeidos = avisos.noLeidas) }
+                } }
+                composable("admin/solicitudes") { RutaPrivada("admin/solicitudes", sesion) {
+                    AdminConPermiso(db, sesionVm) { vm -> AdminSolicitudesScreen(vm, onVolver = { nav.popBackStack() }, onAbrir = { abrir("admin/solicitud/$it") }) }
+                } }
+                composable("admin/solicitud/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
+                    RutaPrivada("admin/solicitud/{id}", sesion) {
+                        AdminConPermiso(db, sesionVm) { vm -> AdminDetalleSolicitudScreen(vm, e.arguments?.getLong("id") ?: -1, onVolver = { nav.popBackStack() }) }
+                    }
+                }
             }
         }
     }
@@ -241,3 +278,4 @@ private fun AdminConPermiso(db: AppDatabase, sesionVm: SesionViewModel, contenid
     val vm: AdminCotizacionesViewModel = viewModel(factory = factory)
     contenido(vm)
 }
+
