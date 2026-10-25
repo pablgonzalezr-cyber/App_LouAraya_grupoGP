@@ -1,83 +1,78 @@
 package com.example.applouaraya_grupogp.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import com.example.applouaraya_grupogp.ui.adaptive.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.applouaraya_grupogp.R
+import com.example.applouaraya_grupogp.ui.adaptive.*
+import com.example.applouaraya_grupogp.ui.design.*
 
 @Composable
-fun DashboardScreen(
-    nombre: String,
-    onCatalogo: () -> Unit,
-    onCerrarSesion: () -> Unit,
-    onCotizacion: () -> Unit,
-    onHistorial: () -> Unit,
-    onFavoritos: () -> Unit,
-    onPerfil: () -> Unit,
-    onNovedades: () -> Unit,
-    onEscaner: () -> Unit,
-    onMapa: () -> Unit,
-    onAvisos: () -> Unit,
-    avisosNoLeidos: Int
-) {
-    AdaptiveColumn(form = false, spacing = 20.dp) {
-        Spacer(Modifier.height(20.dp))
-
-        Text(
-            "Lou Araya Macramé",
-            style = MaterialTheme.typography.headlineLarge,
-            color = Color(0xFF51362B)
-        )
-
-        Text(
-            "¡Bienvenido, $nombre!",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Text("Descubre el arte del macramé hecho a mano.")
-
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE9D8C6)
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    "Explora nuestra colección",
-                    style = MaterialTheme.typography.titleLarge
-                )
-
-                Text(
-                    "Piezas únicas para decorar hogares y eventos."
-                )
-
-                Button(
-                    onClick = onCatalogo,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFA65E43)
-                    )
-                ) {
-                    Text("Ver catálogo")
+fun DashboardScreen(nombre: String, onCatalogo: () -> Unit, onCerrarSesion: () -> Unit,
+                    onCotizacion: () -> Unit, onHistorial: () -> Unit, onFavoritos: () -> Unit,
+                    onPerfil: () -> Unit, onNovedades: () -> Unit, onEscaner: () -> Unit,
+                    onMapa: () -> Unit, onAvisos: () -> Unit, avisosNoLeidos: Int) {
+    AdaptiveColumn(form = false, spacing = 18.dp, padding = 20.dp) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+            Column {
+                LouEyebrow("LOU ARAYA · TALLER TEXTIL")
+                Text("Lou Araya Macramé", style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold, color = LouColors.Cafe)
+            }
+            LouBrandMark()
+        }
+        Text("¡Bienvenido, $nombre!", style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold, color = LouColors.Cafe)
+        Text("Descubre el arte del macramé hecho a mano.", color = LouColors.TextoSecundario)
+        Card(shape = LouShape, colors = CardDefaults.cardColors(containerColor = LouColors.ArenaClara),
+            modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Image(painter = painterResource(R.drawable.macrame_tapiz),
+                    contentDescription = "Colección artesanal destacada",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().height(160.dp))
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    LouEyebrow("COLECCIÓN DESTACADA")
+                    Text("Colección de diseño artesanal", style = MaterialTheme.typography.titleLarge,
+                        color = LouColors.Cafe, fontWeight = FontWeight.Bold)
+                    Text("Piezas únicas para decorar hogares y eventos.", color = LouColors.TextoSecundario)
+                    LouPrimaryButton("Ver catálogo", onCatalogo)
                 }
             }
         }
-
-        AdaptiveActions(listOf(
-            "Cotización personalizada" to onCotizacion,
-            "Mis solicitudes" to onHistorial,
-            "Mis favoritos" to onFavoritos,
-            "Perfil y configuración" to onPerfil,
-            "Colecciones y campañas" to onNovedades,
-            "Escanear QR" to onEscaner,
-            "Mapa de ferias y showrooms" to onMapa,
-            "Centro de avisos ($avisosNoLeidos sin leer)" to onAvisos,
-            "Cerrar sesión" to onCerrarSesion
-        ))
+        LouSectionTitle("Explora Lou Araya", "Accesos rápidos")
+        val acciones = listOf(
+            Triple("▦", "Catálogo", onCatalogo),
+            Triple("♡", "Mis favoritos", onFavoritos),
+            Triple("◇", "Mapa de ferias y showrooms", onMapa),
+            Triple("▣", "Escanear QR", onEscaner),
+            Triple("✦", "Cotización personalizada", onCotizacion),
+            Triple("≡", "Mis solicitudes", onHistorial),
+            Triple("❀", "Colecciones y campañas", onNovedades),
+            Triple("◉", "Centro de avisos ($avisosNoLeidos sin leer)", onAvisos),
+            Triple("☺", "Perfil y configuración", onPerfil)
+        )
+        val columnas = if (columnasPara(LocalLouWidth.current) == 1) 2 else 3
+        acciones.chunked(columnas).forEach { fila ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                fila.forEach { (simbolo, texto, accion) ->
+                    LouShortcut(simbolo, texto, accion, Modifier.weight(1f))
+                }
+                repeat(columnas - fila.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        TextButton(onClick = onCerrarSesion, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            Text("Cerrar sesión", color = LouColors.Terracota)
+        }
     }
 }

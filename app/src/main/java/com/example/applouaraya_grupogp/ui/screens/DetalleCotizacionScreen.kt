@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.applouaraya_grupogp.ui.design.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.applouaraya_grupogp.model.CotizacionEntity
 import com.example.applouaraya_grupogp.viewmodel.HistorialCotizacionesViewModel
@@ -32,8 +33,8 @@ fun DetalleCotizacionScreen(usuarioId: Long, id: Long, onVolver: () -> Unit, vm:
     }
     Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding()
         .verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        TextButton(onClick = onVolver) { Text("← Mis solicitudes") }
-        Text("Detalle de solicitud", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF51362B))
+        LouBackButton(onVolver, "← Mis solicitudes")
+        LouPageHeading("Detalle de solicitud", "Consulta el estado de tu pedido personalizado")
         when {
             cargando -> CircularProgressIndicator()
             error -> { Text("No se pudo cargar la solicitud."); OutlinedButton(onClick = { reintento++ }) { Text("Reintentar") } }
