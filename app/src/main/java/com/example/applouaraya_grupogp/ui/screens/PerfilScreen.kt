@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.example.applouaraya_grupogp.ui.adaptive.AdaptiveColumn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -44,62 +45,80 @@ fun PerfilScreen(vm: PerfilViewModel, preferencias: PreferenciasLocales, guardan
         ContextCompat.checkSelfPermission(contexto, permiso) == PackageManager.PERMISSION_GRANTED -> "Concedido"
         else -> "No concedido"
     }
-    Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding()
-        .verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    PerfilLayout(estado.rol == "ADMINISTRADOR") {
         LouBackButton(onVolver, "← Inicio")
         LouPageHeading("Mi perfil", "Gestiona tu cuenta y preferencias")
         if (estado.cargando) CircularProgressIndicator()
-        if (!estado.cargando) {
-            Text("Correo: ${estado.correo}")
-            Text("Rol: ${estado.rol}")
-            OutlinedTextField(value = estado.nombre, onValueChange = vm::cambiarNombre, enabled = !estado.guardando,
-                label = { Text("Nombre") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                isError = estado.errorNombre != null, supportingText = { estado.errorNombre?.let { Text(it) } })
-            Button(onClick = vm::guardar, enabled = estado.editando && !estado.guardando,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA65E43))) {
-                Text(if (estado.guardando) "Guardando…" else "Guardar nombre")
+        PerfilSection(estado.rol == "ADMINISTRADOR") {
+            if (!estado.cargando) {
+                Text("Correo: ${estado.correo}")
+                Text("Rol: ${estado.rol}")
+                OutlinedTextField(value = estado.nombre, onValueChange = vm::cambiarNombre, enabled = !estado.guardando,
+                    label = { Text("Nombre") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    isError = estado.errorNombre != null, supportingText = { estado.errorNombre?.let { Text(it) } })
+                Button(onClick = vm::guardar, enabled = estado.editando && !estado.guardando,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA65E43))) {
+                    Text(if (estado.guardando) "Guardando…" else "Guardar nombre")
+                }
             }
         }
         estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = vm::cargar) { Text("Reintentar") } }
         estado.mensaje?.let { Text(it, color = Color(0xFF38684E)) }
-        HorizontalDivider()
-        Text("Configuración de esta cuenta", style = MaterialTheme.typography.titleLarge, color = Color(0xFF51362B))
-        Text("Preferencias locales guardadas en este dispositivo.")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Confirmar cierre o cambio\nde usuario", modifier = Modifier.weight(1f))
-            Switch(checked = preferencias.confirmarSalida, enabled = !guardandoPreferencias,
-                onCheckedChange = { onPreferencias(preferencias.copy(confirmarSalida = it)) })
+        PerfilSection(estado.rol == "ADMINISTRADOR") {
+            HorizontalDivider()
+            Text("Configuración de esta cuenta", style = MaterialTheme.typography.titleLarge, color = Color(0xFF51362B))
+            Text("Preferencias locales guardadas en este dispositivo.")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Confirmar cierre o cambio\nde usuario", modifier = Modifier.weight(1f))
+                Switch(checked = preferencias.confirmarSalida, enabled = !guardandoPreferencias,
+                    onCheckedChange = { onPreferencias(preferencias.copy(confirmarSalida = it)) })
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Mostrar ayuda en cotizaciones", modifier = Modifier.weight(1f))
+                Switch(checked = preferencias.mostrarAyuda, enabled = !guardandoPreferencias,
+                    onCheckedChange = { onPreferencias(preferencias.copy(mostrarAyuda = it)) })
+            }
+            errorPreferencias?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Text("Avisos de Android", style = MaterialTheme.typography.titleMedium)
+            Text("Silenciar no elimina el historial del centro de avisos.", style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Avisos de cotizaciones", Modifier.weight(1f))
+                Switch(checked = preferencias.avisosCotizaciones, enabled = !guardandoPreferencias,
+                    onCheckedChange = { onPreferencias(preferencias.copy(avisosCotizaciones = it)) })
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Avisos de campañas", Modifier.weight(1f))
+                Switch(checked = preferencias.avisosCampanias, enabled = !guardandoPreferencias,
+                    onCheckedChange = { onPreferencias(preferencias.copy(avisosCampanias = it)) })
+            }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Mostrar ayuda en cotizaciones", modifier = Modifier.weight(1f))
-            Switch(checked = preferencias.mostrarAyuda, enabled = !guardandoPreferencias,
-                onCheckedChange = { onPreferencias(preferencias.copy(mostrarAyuda = it)) })
+        PerfilSection(estado.rol == "ADMINISTRADOR") {
+            HorizontalDivider()
+            Text("Permisos del dispositivo", style = MaterialTheme.typography.titleLarge, color = Color(0xFF51362B))
+            Text("Cámara: ${estadoPermiso(Manifest.permission.CAMERA)}")
+            Text("Ubicación aproximada: ${estadoPermiso(Manifest.permission.ACCESS_COARSE_LOCATION)}")
+            Text("Ubicación precisa: ${estadoPermiso(Manifest.permission.ACCESS_FINE_LOCATION)}")
+            Text("Esta pantalla solo consulta el estado. No activa la cámara ni obtiene tu ubicación.", style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = {
+                try { contexto.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${contexto.packageName}"))) }
+                catch (_: android.content.ActivityNotFoundException) { errorAjustes = "No se pudieron abrir los ajustes del sistema" }
+            }) { Text("Abrir ajustes del sistema") }
+            errorAjustes?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-        errorPreferencias?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Text("Avisos de Android", style = MaterialTheme.typography.titleMedium)
-        Text("Silenciar no elimina el historial del centro de avisos.", style = MaterialTheme.typography.bodySmall)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Avisos de cotizaciones", Modifier.weight(1f))
-            Switch(checked = preferencias.avisosCotizaciones, enabled = !guardandoPreferencias,
-                onCheckedChange = { onPreferencias(preferencias.copy(avisosCotizaciones = it)) })
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Avisos de campañas", Modifier.weight(1f))
-            Switch(checked = preferencias.avisosCampanias, enabled = !guardandoPreferencias,
-                onCheckedChange = { onPreferencias(preferencias.copy(avisosCampanias = it)) })
-        }
-        HorizontalDivider()
-        Text("Permisos del dispositivo", style = MaterialTheme.typography.titleLarge, color = Color(0xFF51362B))
-        Text("Cámara: ${estadoPermiso(Manifest.permission.CAMERA)}")
-        Text("Ubicación aproximada: ${estadoPermiso(Manifest.permission.ACCESS_COARSE_LOCATION)}")
-        Text("Ubicación precisa: ${estadoPermiso(Manifest.permission.ACCESS_FINE_LOCATION)}")
-        Text("Esta pantalla solo consulta el estado. No activa la cámara ni obtiene tu ubicación.", style = MaterialTheme.typography.bodySmall)
-        OutlinedButton(onClick = {
-            try { contexto.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${contexto.packageName}"))) }
-            catch (_: android.content.ActivityNotFoundException) { errorAjustes = "No se pudieron abrir los ajustes del sistema" }
-        }) { Text("Abrir ajustes del sistema") }
-        errorAjustes?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         OutlinedButton(onClick = onCambiarUsuario, enabled = !estado.guardando && !guardandoPreferencias, modifier = Modifier.fillMaxWidth()) { Text("Cambiar de usuario") }
         OutlinedButton(onClick = onCerrarSesion, enabled = !estado.guardando && !guardandoPreferencias, modifier = Modifier.fillMaxWidth()) { Text("Cerrar sesión") }
     }
+}
+
+@Composable
+private fun PerfilLayout(administrador: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    if(administrador) AdaptiveColumn(padding = 20.dp, content = content)
+    else Column(Modifier.fillMaxSize().background(Color(0xFFF7F1E8)).safeDrawingPadding()
+        .verticalScroll(rememberScrollState()).imePadding().padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+}
+
+@Composable
+private fun ColumnScope.PerfilSection(administrador: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    if(administrador) LouPanel(Modifier.fillMaxWidth(), content) else content()
 }

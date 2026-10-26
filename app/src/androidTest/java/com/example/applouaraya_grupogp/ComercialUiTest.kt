@@ -70,9 +70,9 @@ class ComercialUiTest {
         val id=runBlocking{productos.observarPublicados().first().single{it.nombre=="Producto UI nuevo"}.id}
         runBlocking{productos.guardar(ProductoFormulario.desde(db.productoDao().buscar(id)!!).copy(precio="23456",descripcion="Descripción modificada en tiempo real"))}
         esperar("$23.456 CLP")
-        compose.onNodeWithText("♡ Guardar").performClick();esperar("♥ Guardado")
+        compose.onNodeWithText("♡ Guardar").performScrollTo().performClick();esperar("♥ Guardado")
         runBlocking{assertEquals(setOf(1,id),favoritos.favoritoDao().observarIds(clienteId).first().toSet())}
-        compose.onNodeWithText("Ver detalle").performClick();esperar("Descripción modificada en tiempo real")
+        compose.onNodeWithText("Ver detalle").performScrollTo().performClick();esperar("Descripción modificada en tiempo real")
         runBlocking{productos.desactivar(id)}
         esperar("0 diseños encontrados")
         // El buscador conserva la consulta; solo debe desaparecer la tarjeta.

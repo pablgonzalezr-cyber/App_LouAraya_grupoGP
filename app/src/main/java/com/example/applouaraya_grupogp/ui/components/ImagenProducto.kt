@@ -1,6 +1,5 @@
 package com.example.applouaraya_grupogp.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
@@ -8,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import android.graphics.BitmapFactory
 import com.example.applouaraya_grupogp.repository.ImagenesProducto
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +15,6 @@ import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -44,13 +43,12 @@ fun ImagenProducto(producto: Producto, modifier: Modifier = Modifier) {
     } else 0
 
     if (imagenLocal != null) {
-        Image(bitmap = requireNotNull(imagenLocal), contentDescription = "Fotografía de ${producto.nombre}", modifier = modifier, contentScale = ContentScale.Crop)
+        FotografiaProducto(BitmapPainter(requireNotNull(imagenLocal)), "Fotografía de ${producto.nombre}", modifier)
     } else if (idImagen != 0) {
-        Image(
+        FotografiaProducto(
             painter = painterResource(idImagen),
-            contentDescription = "Fotografía de ${producto.nombre}",
-            modifier = modifier,
-            contentScale = ContentScale.Crop
+            descripcion = "Fotografía de ${producto.nombre}",
+            modifier = modifier
         )
     } else {
         Box(

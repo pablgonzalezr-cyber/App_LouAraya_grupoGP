@@ -42,7 +42,7 @@ fun NovedadesScreen(vm:NovedadesViewModel,onVolver:()->Unit,onProducto:(Int)->Un
                     Text("${ContenidoValidator.mostrarFecha(c.inicio)} al ${ContenidoValidator.mostrarFecha(c.termino)}",style=MaterialTheme.typography.bodySmall)
                 }}}
                 items(estado.datos.colecciones,key={"coleccion-${it.coleccion.id}"}){vista->Card(onClick={coleccionId=vista.coleccion.id},colors=CardDefaults.cardColors(containerColor=LouColors.Superficie)){Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    vista.productos.firstOrNull()?.let{ImagenProducto(it,Modifier.fillMaxWidth().height(150.dp))}
+                    vista.productos.firstOrNull()?.let{ImagenProducto(it,Modifier.widthIn(max = 400.dp).fillMaxWidth().aspectRatio(1f))}
                     Text(vista.coleccion.nombre,style=MaterialTheme.typography.titleLarge,color=Color(0xFF51362B));Text(vista.coleccion.descripcion)
                     Text("${vista.productos.size} diseños · Ver colección →")
                 }}}
@@ -53,7 +53,7 @@ fun NovedadesScreen(vm:NovedadesViewModel,onVolver:()->Unit,onProducto:(Int)->Un
                     item{Text(vista.coleccion.nombre,style=MaterialTheme.typography.titleLarge);Text(vista.coleccion.descripcion)}
                     if(vista.productos.isEmpty())item{Text("Esta colección aún no tiene productos publicados disponibles para mostrar.")}
                     items(vista.productos,key={it.id}){p->Card(onClick={onProducto(p.id)},colors=CardDefaults.cardColors(containerColor=LouColors.Superficie)){Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                        ImagenProducto(p,Modifier.fillMaxWidth().height(150.dp));Text(p.nombre,style=MaterialTheme.typography.titleLarge)
+                        ImagenProducto(p,Modifier.widthIn(max = 400.dp).fillMaxWidth().aspectRatio(1f));Text(p.nombre,style=MaterialTheme.typography.titleLarge)
                         Text("Precio referencial: ${p.precio} CLP");Text("Ver diseño →")
                     }}}
                 }

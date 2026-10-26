@@ -24,7 +24,7 @@ fun ProductoCard(producto: Producto, esFavorito: Boolean, permitirFavorito: Bool
         colors = CardDefaults.cardColors(containerColor = LouColors.Superficie),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
         Column {
-            ImagenProducto(producto, Modifier.fillMaxWidth().height(170.dp))
+            ImagenProducto(producto, Modifier.fillMaxWidth().aspectRatio(1f))
             Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(producto.categoria.uppercase(), color = LouColors.Terracota,
                     style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)

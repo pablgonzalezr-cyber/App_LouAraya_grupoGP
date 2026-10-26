@@ -1,19 +1,17 @@
 package com.example.applouaraya_grupogp.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.applouaraya_grupogp.R
 import com.example.applouaraya_grupogp.ui.adaptive.*
+import com.example.applouaraya_grupogp.ui.components.FotografiaProducto
 import com.example.applouaraya_grupogp.ui.design.*
 
 @Composable
@@ -36,11 +34,11 @@ fun DashboardScreen(nombre: String, onCatalogo: () -> Unit, onCerrarSesion: () -
         Text("Descubre el arte del macramé hecho a mano.", color = LouColors.TextoSecundario)
         Card(shape = LouShape, colors = CardDefaults.cardColors(containerColor = LouColors.ArenaClara),
             modifier = Modifier.fillMaxWidth()) {
-            Column {
-                Image(painter = painterResource(R.drawable.macrame_tapiz),
-                    contentDescription = "Colección artesanal destacada",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(160.dp))
+            Column(Modifier.fillMaxWidth()) {
+                FotografiaProducto(painter = painterResource(R.drawable.macrame_tapiz),
+                    descripcion = "Colección artesanal destacada",
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                        .widthIn(max = 440.dp).fillMaxWidth().aspectRatio(1f))
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     LouEyebrow("COLECCIÓN DESTACADA")
                     Text("Colección de diseño artesanal", style = MaterialTheme.typography.titleLarge,

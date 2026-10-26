@@ -57,6 +57,10 @@ class AdaptabilidadTest {
     private fun formulario(width: Int, height: Int) {
         mostrar(width, height) { LoginScreen(false, null, { _, _ -> }, {}) }
         compose.onNodeWithText("Correo electrónico").performScrollTo().performTextInput("demo@example.test")
+        // El IME físico no comparte la densidad del lienzo simulado. Medimos sin IME;
+        // su comportamiento real se comprueba en el caso nativo independiente.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.onNodeWithText("Correo electrónico").performScrollTo().assertIsDisplayed()
         val field = compose.onNode(hasSetTextAction() and hasText("Correo electrónico")).fetchSemanticsNode().boundsInRoot
         val expectedWidth = minOf(width, if (width >= 840) 560 else 520) - 48f
         assertEquals(expectedWidth, field.width / layoutDensity, 3f)
