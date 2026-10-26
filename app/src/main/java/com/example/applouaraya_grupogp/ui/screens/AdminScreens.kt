@@ -39,16 +39,20 @@ fun AdminDashboardContent(estado: com.example.applouaraya_grupogp.viewmodel.Admi
         if (estado.cargando) LinearProgressIndicator(Modifier.fillMaxWidth())
         estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = reintentar) { Text("Reintentar") } }
         LouSectionTitle("Resumen del taller")
-        AdminMetrics(listOf("Total de solicitudes" to if (estado.cargando || estado.error != null) "—" else estado.solicitudes.size.toString()) +
-            EstadoCotizacion.entries.map { e -> e.name to if (estado.cargando || estado.error != null) "—" else estado.solicitudes.count { it.estado == e.name }.toString() })
+        Box(Modifier.fillMaxWidth().louEntrance(60)) {
+            AdminMetrics(listOf("Total de solicitudes" to if (estado.cargando || estado.error != null) "—" else estado.solicitudes.size.toString()) +
+                EstadoCotizacion.entries.map { e -> e.name to if (estado.cargando || estado.error != null) "—" else estado.solicitudes.count { it.estado == e.name }.toString() })
+        }
         LouSectionTitle("Gestiona tu emprendimiento")
-        AdminModules(listOf(
-            Triple("≡", "Gestionar solicitudes", onSolicitudes),
-            Triple("▦", "Administrar productos", onProductos),
-            Triple("❀", "Colecciones y campañas", onContenido),
-            Triple("◉", "Centro de avisos ($avisosNoLeidos sin leer)", onAvisos),
-            Triple("☺", "Perfil y configuración", onPerfil)
-        ))
+        Box(Modifier.fillMaxWidth().louEntrance(140)) {
+            AdminModules(listOf(
+                Triple("≡", "Gestionar solicitudes", onSolicitudes),
+                Triple("▦", "Administrar productos", onProductos),
+                Triple("❀", "Colecciones y campañas", onContenido),
+                Triple("◉", "Centro de avisos ($avisosNoLeidos sin leer)", onAvisos),
+                Triple("☺", "Perfil y configuración", onPerfil)
+            ))
+        }
         OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) { Text("Cerrar sesión") }
 
     }

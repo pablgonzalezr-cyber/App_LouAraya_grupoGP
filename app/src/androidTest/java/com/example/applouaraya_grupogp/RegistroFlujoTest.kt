@@ -43,7 +43,8 @@ class RegistroFlujoTest {
         compose.waitUntil(15000) { compose.onAllNodesWithText(texto).fetchSemanticsNodes().isNotEmpty() }
     }
     private fun formulario(correo: String) {
-        compose.onNodeWithText("Crear una cuenta").performClick()
+        compose.onNodeWithText("Crear una cuenta").performScrollTo().performClick()
+        esperar("Nombre")
         compose.onNodeWithText("Nombre").performTextInput("Cliente resumen")
         compose.onNodeWithText("Correo ficticio").performTextInput(correo)
         compose.onNodeWithText("Contraseña de prueba").performTextInput("ClaveResumen123!")
@@ -55,8 +56,8 @@ class RegistroFlujoTest {
     }
     @Test fun resumenConservaMismoBorradorEditaYGuardaSoloAlConfirmar() {
         iniciar(); formulario("resumen@example.test"); continuar()
-        compose.onNodeWithText("Nombre: Cliente resumen").assertExists()
-        compose.onNodeWithText("Correo: resumen@example.test").assertExists()
+        compose.onNodeWithText("Cliente resumen").assertExists()
+        compose.onNodeWithText("resumen@example.test").assertExists()
         compose.onNodeWithText("Términos y condiciones: Aceptados").assertExists()
         compose.onNodeWithText("ClaveResumen123!").assertDoesNotExist()
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
@@ -79,7 +80,7 @@ class RegistroFlujoTest {
         compose.onNodeWithText("Nombre").performTextInput("Cliente editado")
         compose.onNodeWithText("Ingresa tu nombre").assertDoesNotExist()
         continuar()
-        compose.onNodeWithText("Nombre: Cliente editado").assertExists()
+        compose.onNodeWithText("Cliente editado").assertExists()
         compose.onNodeWithText("Confirmar registro").performScrollTo().performClick()
         esperar("¡Bienvenido, Cliente editado!")
         runBlocking { assertNotNull(db.usuarioDao().buscarPorCorreo("resumen@example.test")) }

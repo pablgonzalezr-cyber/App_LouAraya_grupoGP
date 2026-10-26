@@ -33,7 +33,7 @@ fun DashboardScreen(nombre: String, onCatalogo: () -> Unit, onCerrarSesion: () -
             fontWeight = FontWeight.Bold, color = LouColors.Cafe)
         Text("Descubre el arte del macramé hecho a mano.", color = LouColors.TextoSecundario)
         Card(shape = LouShape, colors = CardDefaults.cardColors(containerColor = LouColors.ArenaClara),
-            modifier = Modifier.fillMaxWidth()) {
+            modifier = Modifier.fillMaxWidth().louEntrance(80)) {
             Column(Modifier.fillMaxWidth()) {
                 FotografiaProducto(painter = painterResource(R.drawable.macrame_tapiz),
                     descripcion = "Colección artesanal destacada",
@@ -61,10 +61,10 @@ fun DashboardScreen(nombre: String, onCatalogo: () -> Unit, onCerrarSesion: () -
             Triple("☺", "Perfil y configuración", onPerfil)
         )
         val columnas = if (columnasPara(LocalLouWidth.current) == 1) 2 else 3
-        acciones.chunked(columnas).forEach { fila ->
+        acciones.chunked(columnas).forEachIndexed { indice, fila ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 fila.forEach { (simbolo, texto, accion) ->
-                    LouShortcut(simbolo, texto, accion, Modifier.weight(1f))
+                    LouShortcut(simbolo, texto, accion, Modifier.weight(1f).louEntrance(140 + indice * 45))
                 }
                 repeat(columnas - fila.size) { Spacer(Modifier.weight(1f)) }
             }

@@ -22,21 +22,21 @@ import com.example.applouaraya_grupogp.ui.design.*
 fun BienvenidaScreen(onComenzar: () -> Unit = {}, onRegistrarse: () -> Unit = {}) {
     AdaptiveColumn(padding = 22.dp, centered = false, spacing = 16.dp) {
         Spacer(Modifier.height(4.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        Row(Modifier.fillMaxWidth().louEntrance(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center) {
             LouBrandMark()
         }
-        Text("Lou Araya\nMacramé", modifier = Modifier.fillMaxWidth(),
+        Text("Lou Araya\nMacramé", modifier = Modifier.fillMaxWidth().louEntrance(60),
             style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
             color = LouColors.Cafe, textAlign = TextAlign.Center, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified)
-        Text("Arte en fibras que decora tus historias", Modifier.fillMaxWidth(),
+        Text("Arte en fibras que decora tus historias", Modifier.fillMaxWidth().louEntrance(100),
             color = LouColors.TextoSecundario, textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge)
         FotografiaProducto(painter = painterResource(R.drawable.macrame_tapiz),
             descripcion = "Tapiz artesanal de Lou Araya Macramé",
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f))
-        LouPrimaryButton("Comenzar", onComenzar, Modifier.fillMaxWidth())
-        OutlinedButton(onClick = onRegistrarse, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f).louEntrance(120))
+        LouPrimaryButton("Comenzar", onComenzar, Modifier.fillMaxWidth().louEntrance(180, rise = true))
+        OutlinedButton(onClick = onRegistrarse, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).louEntrance(230, rise = true),
             shape = RoundedCornerShape(15.dp)) { Text("Crear una cuenta") }
         LouPanel(Modifier.fillMaxWidth()) {
             Text("Hecho con dedicación", color = LouColors.Cafe,

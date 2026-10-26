@@ -21,8 +21,22 @@ fun CotizacionScreen(usuarioId: Long, onVolver: () -> Unit, onGuardada: (Long) -
                      mostrarAyuda: Boolean = true) {
     val vm: CotizacionViewModel = viewModel()
     val estado by vm.estado.collectAsState()
+    CotizacionContent(estado, onVolver, onGuardada, mostrarAyuda, vm::cambiar) { vm.guardar(usuarioId) }
+}
+
+@Composable
+internal fun CotizacionContent(
+    estado: com.example.applouaraya_grupogp.model.CotizacionUiState,
+    onVolver: () -> Unit, onGuardada: (Long) -> Unit, mostrarAyuda: Boolean = true,
+    onCambiar: (com.example.applouaraya_grupogp.model.CotizacionFormulario) -> Unit,
+    onGuardar: () -> Unit
+) {
     val f = estado.formulario
-    LaunchedEffect(estado.guardadaId) { estado.guardadaId?.let(onGuardada) }
+    val guardadaId = estado.guardadaId
+    if (guardadaId != null) {
+        ConfirmacionCotizacion(onVolver = onVolver, onContinuar = { onGuardada(guardadaId) })
+        return
+    }
     AdaptiveSurface {
         Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()
             .verticalScroll(rememberScrollState()).padding(20.dp),
@@ -34,29 +48,29 @@ fun CotizacionScreen(usuarioId: Long, onVolver: () -> Unit, onGuardada: (Long) -
                 LouSectionTitle("Tu diseño")
                 Text("Completa las características de tu solicitud.", color = LouColors.TextoSecundario)
                 CampoCotizacion("Descripción", f.descripcion, estado.errores["descripcion"],
-                    !estado.guardando, multilinea = true) { vm.cambiar(f.copy(descripcion = it)) }
+                    !estado.guardando, multilinea = true) { onCambiar(f.copy(descripcion = it)) }
                 SelectorCotizacion("Categoría",
                     listOf("" to "Selecciona una categoría") + CotizacionValidator.categorias.map { it to it },
-                    f.categoria, !estado.guardando) { vm.cambiar(f.copy(categoria = it)) }
+                    f.categoria, !estado.guardando) { onCambiar(f.copy(categoria = it)) }
                 estado.errores["categoria"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 CampoCotizacion("Material", f.material, estado.errores["material"], !estado.guardando) {
-                    vm.cambiar(f.copy(material = it))
+                    onCambiar(f.copy(material = it))
                 }
             }
             LouPanel(Modifier.fillMaxWidth()) {
                 LouSectionTitle("Medidas y detalles")
                 CampoCotizacion("Ancho (cm)", f.ancho, estado.errores["ancho"],
-                    !estado.guardando, KeyboardType.Decimal) { vm.cambiar(f.copy(ancho = it)) }
+                    !estado.guardando, KeyboardType.Decimal) { onCambiar(f.copy(ancho = it)) }
                 CampoCotizacion("Largo / alto (cm)", f.largo, estado.errores["largo"],
-                    !estado.guardando, KeyboardType.Decimal) { vm.cambiar(f.copy(largo = it)) }
+                    !estado.guardando, KeyboardType.Decimal) { onCambiar(f.copy(largo = it)) }
                 CampoCotizacion("Cantidad", f.cantidad, estado.errores["cantidad"],
-                    !estado.guardando, KeyboardType.Number) { vm.cambiar(f.copy(cantidad = it)) }
+                    !estado.guardando, KeyboardType.Number) { onCambiar(f.copy(cantidad = it)) }
                 CampoCotizacion("Fecha requerida (opcional, dd/mm/aaaa)", f.fecha,
-                    estado.errores["fecha"], !estado.guardando) { vm.cambiar(f.copy(fecha = it)) }
+                    estado.errores["fecha"], !estado.guardando) { onCambiar(f.copy(fecha = it)) }
                 SelectorCotizacion("Producto de referencia (opcional)",
                     listOf("" to "Sin referencia") + estado.productosReferencia.map { it.id.toString() to it.nombre },
                     f.productoId?.toString() ?: "", !estado.guardando) {
-                    vm.cambiar(f.copy(productoId = it.toIntOrNull()))
+                    onCambiar(f.copy(productoId = it.toIntOrNull()))
                 }
                 estado.errores["producto"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
@@ -70,8 +84,8 @@ fun CotizacionScreen(usuarioId: Long, onVolver: () -> Unit, onGuardada: (Long) -
             }
             estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             LouPrimaryButton(if (estado.guardando) "Guardando…" else "Guardar solicitud",
-                { vm.guardar(usuarioId) }, Modifier.fillMaxWidth(),
-                enabled = !estado.guardando && estado.guardadaId == null)
+                onGuardar, Modifier.fillMaxWidth(),
+                enabled = !estado.guardando)
             Spacer(Modifier.height(14.dp))
         }
     }
@@ -101,6 +115,39 @@ private fun SelectorCotizacion(label: String, opciones: List<Pair<String, String
         DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             opciones.forEach { (valor, texto) -> DropdownMenuItem(text = { Text(texto) },
                 onClick = { cambiar(valor); abierto = false }) }
+        }
+    }
+}
+
+/** Only composed after the repository has returned a saved ID. No save action here. */
+@Composable
+internal fun ConfirmacionCotizacion(onVolver: () -> Unit, onContinuar: () -> Unit) {
+    var continuando by remember { mutableStateOf(false) }
+    val continuarActual by rememberUpdatedState(onContinuar)
+    val accesibilidad = androidx.compose.ui.platform.LocalAccessibilityManager.current
+    LaunchedEffect(Unit) {
+        val espera = accesibilidad?.calculateRecommendedTimeoutMillis(
+            1600L, containsIcons = true, containsText = true, containsControls = true
+        ) ?: 1600L
+        kotlinx.coroutines.delay(espera)
+        if (!continuando) {
+            continuando = true
+            continuarActual()
+        }
+    }
+    com.example.applouaraya_grupogp.ui.adaptive.AdaptiveColumn(spacing = 20.dp) {
+        LouBackButton(onVolver)
+        LouPanel(Modifier.fillMaxWidth().louEntrance(scale = true)) {
+            Text("\u2713", color = LouColors.Terracota, style = MaterialTheme.typography.displayMedium,
+                modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            LouPageHeading("Solicitud registrada correctamente",
+                "Tu cotizaci\u00f3n se guard\u00f3 en este dispositivo.")
+            LouPrimaryButton("Ver mi solicitud", {
+                if (!continuando) {
+                    continuando = true
+                    onContinuar()
+                }
+            }, Modifier.fillMaxWidth(), enabled = !continuando)
         }
     }
 }
