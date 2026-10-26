@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.applouaraya_grupogp.model.Producto
@@ -23,7 +24,8 @@ fun DetalleProductoScreen(producto: Producto, esFavorito: Boolean, permitirFavor
         Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState())
             .padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
             LouBackButton(onVolver, "← Volver al catálogo")
-            ImagenProducto(producto, Modifier.fillMaxWidth().height(295.dp))
+            ImagenProducto(producto, Modifier.align(Alignment.CenterHorizontally)
+                .widthIn(max = 600.dp).fillMaxWidth().aspectRatio(1f))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 LouEyebrow(producto.categoria)
                 LouBadge(if (producto.disponible) "Disponible" else "Fabricación a pedido", producto.disponible)
