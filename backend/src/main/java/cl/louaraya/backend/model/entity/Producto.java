@@ -2,6 +2,7 @@ package cl.louaraya.backend.model.entity;
 
 import cl.louaraya.backend.dto.ProductoRequest;
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 import java.math.BigDecimal;
 
 @Entity
@@ -19,6 +20,9 @@ public class Producto {
     @Column(nullable = false, precision = 11, scale = 2) private BigDecimal precio;
     @Column(nullable = false) private boolean disponible;
     @Column(nullable = false) private boolean publicado;
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean archivado;
 
     protected Producto() {}
     public Producto(ProductoRequest datos) { actualizar(datos); }
@@ -27,6 +31,7 @@ public class Producto {
         anchoCm = d.anchoCm(); altoCm = d.altoCm(); precio = d.precio(); disponible = d.disponible(); publicado = d.publicado();
     }
     public void publicar(boolean valor) { publicado = valor; }
+    public void archivar() { archivado = true; }
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
     public String getDescripcion() { return descripcion; }

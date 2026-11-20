@@ -57,13 +57,16 @@ Se usa BigDecimal para precio y medidas. `largoCm` de Android corresponde a `alt
 | Método y ruta | Acceso | Resultado |
 | --- | --- | --- |
 | GET `/api/productos` | Público | 200, lista publicada ordenada por ID |
-| GET `/api/productos/{id}` | Público | 200 publicado; 404 inexistente u oculto |
-| GET `/api/admin/productos` | ADMIN | 200, todos, incluidos ocultos |
+| GET `/api/productos/{id}` | Público | 200 publicado; 404 inexistente, oculto o archivado |
+| GET `/api/admin/productos` | ADMIN | 200, publicados y ocultos, excluidos archivados |
 | POST `/api/admin/productos` | ADMIN | 201, DTO creado y cabecera Location |
-| PUT `/api/admin/productos/{id}` | ADMIN | 200, edición completa conservando ID; 404 inexistente |
-| PATCH `/api/admin/productos/{id}/publicacion` | ADMIN | 200, cambia solo `publicado`; 404 inexistente |
+| PUT `/api/admin/productos/{id}` | ADMIN | 200, edición completa conservando ID; 404 inexistente o archivado |
+| PATCH `/api/admin/productos/{id}/publicacion` | ADMIN | 200, cambia solo `publicado`; 404 inexistente o archivado |
+| DELETE `/api/admin/productos/{id}` | ADMIN | 204 sin cuerpo al archivar; 404 inexistente o ya archivado |
 
-No existe DELETE ni subida de imágenes. PUT requiere todos los campos editables. PATCH acepta únicamente `{"publicado":false}` o `{"publicado":true}`. JSON con campos desconocidos se rechaza, incluyendo intentar asignar `id` desde el cliente.
+PUT requiere todos los campos editables. PATCH acepta únicamente `{"publicado":false}` o `{"publicado":true}`. JSON con campos desconocidos se rechaza, incluyendo intentar asignar `id` desde el cliente.
+
+DELETE realiza una baja lógica. Marca la fila como `archivado` y conserva su ID y datos para futuras referencias de cotizaciones. Los archivados quedan fuera de ambos listados, del detalle público y de PUT y PATCH. El API actual carece de una operación de restauración. Si solo necesitas retirar temporalmente un producto del catálogo público, usa PATCH de publicación.
 
 Los errores de validación devuelven **400** con ProblemDetail y un mapa `errores` por campo. JSON ilegible o identificadores no numéricos devuelven 400. Credenciales ausentes/incorrectas devuelven **401**, y un rol no administrativo **403**. La autorización se verifica tanto en filtros HTTP como en métodos de servicio. Solo se configura una cuenta ADMIN de demostración; CLIENTE se simula exclusivamente en las pruebas para comprobar el rechazo.
 
@@ -110,6 +113,8 @@ Este microservicio es dueño de la tabla `productos` y de su secuencia de IDs. E
 
 H2 de desarrollo: `jdbc:h2:file:./data/lou-araya;DB_CLOSE_ON_EXIT=FALSE`. Hibernate usa `ddl-auto=update` para esta etapa académica. No hay `create-drop` en desarrollo. Los ocho productos se copiaron de ProductosDemo.kt conservando nombres, descripciones, medidas, precios, disponibilidad e IDs 1–8. El INSERT inicial solo actúa si falta ese ID; no sobrescribe un producto existente. Una secuencia independiente comienza en 9, evitando colisionar con los IDs reservados y conservando su avance en disco.
 
+Al actualizar una base existente, Hibernate agrega `archivado` con valor predeterminado `false`. La carga inicial comprueba la existencia del ID en la tabla, por lo que una semilla archivada permanece archivada tras reiniciar.
+
 Las fotografías y sus nombres de recurso Android no se migran: este backend no sirve ni sube imágenes. Tampoco copia ediciones del Room del Samsung. Es un catálogo independiente.
 
 ## Compilación y pruebas automatizadas
@@ -136,7 +141,7 @@ Con el puerto 8095 libre y después de `verify`:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Verify-Backend.ps1 -JavaHome $env:JAVA_HOME
 ```
 
-El script genera credenciales aleatorias solo para sus procesos, inicia tres veces el JAR real en 8095 y comprueba 18 condiciones. Usa una H2 de archivo nueva bajo `backend/verification/<UUID>/persistencia.mv.db`, **nunca `data/lou-araya`**. Prueba creación, precio, ocultación, reactivación, dos reinicios, no sobrescritura de semillas y ausencia de duplicados. Detiene únicamente los procesos Java que creó; no mata procesos de Android Studio ni un servidor previamente existente. Los reinicios del script usan terminación del proceso y WRITE_DELAY=0 en esa base aislada; el inicio manual se detiene normalmente con Ctrl+C. Conserva los archivos y logs de evidencia, sin borrar bases.
+El script genera credenciales aleatorias solo para sus procesos, inicia tres veces el JAR real en 8095 y comprueba 22 condiciones. Usa una H2 de archivo nueva bajo `backend/verification/<UUID>/persistencia.mv.db`, **nunca `data/lou-araya`**. Prueba creación, precio, ocultación, reactivación y archivo de una semilla. Tras reiniciar comprueba que se conservan las ediciones y que la semilla archivada sigue fuera de ambos listados sin duplicados. Detiene únicamente los procesos Java que creó; no mata procesos de Android Studio ni un servidor previamente existente. Los reinicios del script usan terminación del proceso y WRITE_DELAY=0 en esa base aislada; el inicio manual se detiene normalmente con Ctrl+C. Conserva los archivos y logs de evidencia, sin borrar bases.
 
 ## Resultados exactos — 18/10/2026
 

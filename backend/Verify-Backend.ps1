@@ -91,11 +91,16 @@ try {
     Esperar-CodigoLou "/api/admin/productos/$idLou/publicacion" 'PATCH' 200 '{"publicado":true}' $true
     $reactivadoLou = Invoke-RestMethod "$baseLou/api/productos/$idLou"
     Confirmar-Lou ((-not $reactivadoLou.disponible) -and $reactivadoLou.publicado) 'Republicar mantiene disponibilidad original'
+    Esperar-CodigoLou '/api/admin/productos/8' 'DELETE' 204 $null $true
     Detener-Lou
     Iniciar-Lou 3
     $finalLou = Invoke-RestMethod "$baseLou/api/productos"
-    Confirmar-Lou (($finalLou.Count -eq 9) -and (($finalLou.id | Select-Object -Unique).Count -eq 9)) 'Segundo reinicio sin duplicados'
+    Confirmar-Lou (($finalLou.id -join ',') -eq "1,2,3,4,5,6,7,$idLou") 'Segundo reinicio sin duplicados ni reposición de la semilla archivada'
     Confirmar-Lou (($finalLou | Where-Object id -eq $idLou).precio -eq 23990) 'Segundo reinicio conserva edición y reactivación'
+    Esperar-CodigoLou '/api/productos/8' 'GET' 404
+    $adminFinalLou = Invoke-RestMethod "$baseLou/api/admin/productos" -Headers $cabecerasLou
+    Confirmar-Lou (($adminFinalLou.id -join ',') -eq "1,2,3,4,5,6,7,$idLou") 'El listado administrativo sigue excluyendo la semilla archivada'
+    Esperar-CodigoLou '/api/admin/productos/8' 'DELETE' 404 $null $true
     $resultadosLou | Set-Content "$carpetaLou/resultados.txt" -Encoding UTF8
     Write-Output "APROBADAS: $($resultadosLou.Count). Evidencia y base aislada: $carpetaLou"
 } finally {
