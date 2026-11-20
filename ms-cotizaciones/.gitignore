@@ -1,0 +1,12 @@
+/target/
+/data/
+/verification/
+/.tools/
+*.mv.db
+*.trace.db
+*.lock.db
+*.log
+*.jks
+*.keystore
+.env
+.env.*
