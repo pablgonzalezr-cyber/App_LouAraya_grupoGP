@@ -79,6 +79,27 @@ Los errores de validación devuelven **400** con ProblemDetail y un mapa `errore
 - No expongas esta configuración a una red pública sin HTTPS y una revisión de autenticación/CSRF/despliegue. No contiene JWT, Firebase ni registro de usuarios remoto.
 - La interfaz Swagger no conserva autorización entre recargas mediante su opción persistAuthorization; el navegador puede conservar autenticación Basic durante su sesión.
 
+## Colecciones y campañas
+
+Swagger documenta los recursos públicos `/api/colecciones` y `/api/campanias` y sus equivalentes administrativos bajo `/api/admin`. Las rutas administrativas usan el mismo HTTP Basic del catálogo.
+
+| Operación | Ruta pública | Ruta administrativa | Éxito |
+| --- | --- | --- | --- |
+| Listar | GET `/api/{recurso}` | GET `/api/admin/{recurso}` | 200 |
+| Consultar | GET `/api/{recurso}/{id}` | GET `/api/admin/{recurso}/{id}` | 200 |
+| Crear | | POST `/api/admin/{recurso}` | 201 con `Location` del detalle administrativo |
+| Actualizar | | PUT `/api/admin/{recurso}/{id}` | 200 |
+| Cambiar publicación | | PATCH `/api/admin/{recurso}/{id}/publicacion` | 200 |
+| Desactivar | | DELETE `/api/admin/{recurso}/{id}` | 204 sin cuerpo |
+
+Usa `colecciones` o `campanias` en lugar de `{recurso}`. DELETE establece `activa:false` y conserva el registro, su publicación y sus vínculos. Repetirlo devuelve 204 mientras exista el registro. Los administradores pueden consultar los inactivos y reactivarlos mediante PUT. PATCH recibe `{"publicada":true}` o `{"publicada":false}` y conserva `activa`. Un detalle público no visible o un recurso inexistente devuelve 404. Datos o IDs inválidos devuelven 400, y las rutas administrativas devuelven 401 o 403 según las credenciales y el rol.
+
+**Colección.** POST y PUT reciben `nombre`, `descripcion`, `activa`, `publicada` y `productos`, un arreglo de IDs existentes. PUT reemplaza el conjunto completo de asociaciones en una transacción. Para publicar hace falta al menos una asociación. La respuesta administrativa devuelve `productos` como IDs, incluidos los vínculos a productos ocultos o archivados. La respuesta pública usa el mismo campo con objetos de la API de productos y solo incluye productos publicados y vigentes en el catálogo (sin archivar), ordenados por ID. Un producto publicado con `disponible:false` sigue visible con ese estado. Una colección activa y publicada puede aparecer con `productos:[]` cuando ninguno de sus miembros es visible.
+
+**Campaña.** POST y PUT reciben `titulo`, `descripcion`, `inicio`, `termino`, `publicada` y `activa`. Las fechas viajan como `AAAA-MM-DD` y el término debe ser igual o posterior al inicio. El listado y el detalle públicos requieren que la campaña esté activa, publicada y vigente, con ambos límites incluidos según la fecha en `America/Santiago`. Las campañas no tienen asociaciones a productos en Room ni en el backend. La publicación local de Android puede generar avisos en Room. El endpoint guarda el estado comercial y esa integración queda pendiente.
+
+Las tablas `colecciones`, `campanias` y `coleccion_productos` se agregan a la misma H2 del catálogo mediante la configuración de esquema existente. La tabla de asociaciones usa una clave compuesta y referencias a ambas tablas. Cambiar asociaciones o desactivar una colección conserva los productos.
+
 ## Prueba manual con Swagger y reinicios
 
 1. Inicia el servidor y abre Swagger. Ejecuta GET `/api/productos`: la base de desarrollo preparada contiene **8 productos**, IDs 1–8. GET `/api/productos/6` debe mostrar `disponible:false`, `publicado:true`.
@@ -141,7 +162,7 @@ Con el puerto 8095 libre y después de `verify`:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Verify-Backend.ps1 -JavaHome $env:JAVA_HOME
 ```
 
-El script genera credenciales aleatorias solo para sus procesos, inicia tres veces el JAR real en 8095 y comprueba 22 condiciones. Usa una H2 de archivo nueva bajo `backend/verification/<UUID>/persistencia.mv.db`, **nunca `data/lou-araya`**. Prueba creación, precio, ocultación, reactivación y archivo de una semilla. Tras reiniciar comprueba que se conservan las ediciones y que la semilla archivada sigue fuera de ambos listados sin duplicados. Detiene únicamente los procesos Java que creó; no mata procesos de Android Studio ni un servidor previamente existente. Los reinicios del script usan terminación del proceso y WRITE_DELAY=0 en esa base aislada; el inicio manual se detiene normalmente con Ctrl+C. Conserva los archivos y logs de evidencia, sin borrar bases.
+El script genera credenciales aleatorias solo para sus procesos, inicia tres veces el JAR real en 8095 y comprueba 31 condiciones. Usa una H2 de archivo nueva bajo `backend/verification/<UUID>/persistencia.mv.db`, **nunca `data/lou-araya`**. Verifica el CRUD de productos, la persistencia de los vínculos de una colección y las fechas, publicación y desactivación de una campaña. Al archivar un producto, comprueba que el vínculo sobreviva al reinicio y que el producto quede fuera de la colección pública. Detiene únicamente los procesos Java que creó. Los reinicios del script usan terminación del proceso y WRITE_DELAY=0 en esa base aislada. Conserva los archivos y logs de evidencia.
 
 ## Resultados exactos — 18/10/2026
 

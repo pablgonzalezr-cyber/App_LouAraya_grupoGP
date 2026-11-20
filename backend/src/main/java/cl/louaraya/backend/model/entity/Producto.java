@@ -42,4 +42,5 @@ public class Producto {
     public BigDecimal getPrecio() { return precio; }
     public boolean isDisponible() { return disponible; }
     public boolean isPublicado() { return publicado; }
+    public boolean isArchivado() { return archivado; }
 }

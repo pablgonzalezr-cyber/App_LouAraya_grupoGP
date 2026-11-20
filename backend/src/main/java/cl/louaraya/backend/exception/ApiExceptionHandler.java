@@ -9,6 +9,18 @@ import java.util.TreeMap;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+    @ExceptionHandler(ContenidoNoEncontrado.class)
+    public ProblemDetail contenidoNoEncontrado(ContenidoNoEncontrado error) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, error.getMessage());
+    }
+
+    @ExceptionHandler(ContenidoInvalido.class)
+    public ProblemDetail contenidoInvalido(ContenidoInvalido error) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, error.getMessage());
+        problema.setProperty("errores", error.getErrores());
+        return problema;
+    }
+
     @ExceptionHandler(ProductoNoEncontrado.class)
     public ProblemDetail noEncontrado(ProductoNoEncontrado error) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, error.getMessage());
