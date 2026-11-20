@@ -53,6 +53,10 @@ function Esperar-CodigoLou([string]$Ruta, [string]$Metodo, [int]$Codigo, $Body =
     catch { if (-not $_.Exception.Response) { throw }; $codigoLou = [int]$_.Exception.Response.StatusCode }
     Confirmar-Lou ($codigoLou -eq $Codigo) "$Metodo $Ruta devuelve $Codigo"
 }
+function Guardar-ContenidoLou([string]$Ruta, [string]$Metodo, $Datos) {
+    $jsonContenidoLou = $Datos | ConvertTo-Json -Compress
+    Invoke-RestMethod "$baseLou$Ruta" -Method $Metodo -Headers $cabecerasLou -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($jsonContenidoLou))
+}
 try {
     Iniciar-Lou 1
     $inicialesLou = Invoke-RestMethod "$baseLou/api/productos"
@@ -64,6 +68,19 @@ try {
     Confirmar-Lou ($jsLou.StatusCode -eq 200) 'JavaScript de Swagger carga por HTTP'
     $openapiLou = Invoke-RestMethod "$baseLou/v3/api-docs"
     Confirmar-Lou ($openapiLou.components.securitySchemes.basicAuth.scheme -eq 'basic') 'OpenAPI documenta HTTP Basic'
+    $coleccionLou = Guardar-ContenidoLou '/api/admin/colecciones' 'POST' @{
+        nombre = 'Colección de prueba'; descripcion = 'Colección ficticia para verificar vínculos'
+        activa = $true; publicada = $true; productos = @(1, 8)
+    }
+    $rutaColeccionLou = "/api/colecciones/$($coleccionLou.id)"
+    $coleccionPublicaLou = Invoke-RestMethod "$baseLou$rutaColeccionLou"
+    Confirmar-Lou (($coleccionPublicaLou.productos.id -join ',') -eq '1,8') 'Colección pública con sus dos productos asociados'
+    $campaniaLou = Guardar-ContenidoLou '/api/admin/campanias' 'POST' @{
+        titulo = 'Campaña de prueba'; descripcion = 'Campaña ficticia para verificar persistencia'
+        inicio = '2000-01-01'; termino = '2099-12-31'; activa = $true; publicada = $true
+    }
+    $rutaCampaniaLou = "/api/campanias/$($campaniaLou.id)"
+    Esperar-CodigoLou $rutaCampaniaLou 'GET' 200
     $productoLou = @{ nombre='Producto de verificación'; descripcion='Pieza ficticia para comprobar persistencia real'; categoria='Interiores'; material='Algodón'; anchoCm=35; altoCm=60; precio=19990; disponible=$false; publicado=$true }
     $jsonLou = $productoLou | ConvertTo-Json -Compress
     Esperar-CodigoLou '/api/admin/productos' 'POST' 401 $jsonLou
@@ -84,6 +101,10 @@ try {
     $null = Invoke-RestMethod "$baseLou/api/admin/productos/1" -Method Put -Headers $cabecerasLou -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes(($semillaLou | ConvertTo-Json -Compress)))
     Detener-Lou
     Iniciar-Lou 2
+    $coleccionReinicioLou = Invoke-RestMethod "$baseLou/api/admin/colecciones/$($coleccionLou.id)" -Headers $cabecerasLou
+    Confirmar-Lou (($coleccionReinicioLou.productos -join ',') -eq '1,8') 'Primer reinicio conserva los vínculos de la colección'
+    $campaniaReinicioLou = Invoke-RestMethod "$baseLou$rutaCampaniaLou"
+    Confirmar-Lou ($campaniaReinicioLou.publicada -and $campaniaReinicioLou.inicio -eq '2000-01-01' -and $campaniaReinicioLou.termino -eq '2099-12-31') 'Primer reinicio conserva publicación y fechas de la campaña'
     $reinicioLou = Invoke-RestMethod "$baseLou/api/admin/productos" -Headers $cabecerasLou
     $recuperadoLou = $reinicioLou | Where-Object id -eq $idLou
     Confirmar-Lou (($reinicioLou.Count -eq 9) -and ($recuperadoLou.precio -eq 23990) -and (-not $recuperadoLou.publicado)) 'Primer reinicio conserva precio, ID y ocultación'
@@ -91,11 +112,24 @@ try {
     Esperar-CodigoLou "/api/admin/productos/$idLou/publicacion" 'PATCH' 200 '{"publicado":true}' $true
     $reactivadoLou = Invoke-RestMethod "$baseLou/api/productos/$idLou"
     Confirmar-Lou ((-not $reactivadoLou.disponible) -and $reactivadoLou.publicado) 'Republicar mantiene disponibilidad original'
+    Esperar-CodigoLou '/api/admin/productos/8' 'DELETE' 204 $null $true
+    Esperar-CodigoLou "/api/admin/campanias/$($campaniaLou.id)" 'DELETE' 204 $null $true
     Detener-Lou
     Iniciar-Lou 3
     $finalLou = Invoke-RestMethod "$baseLou/api/productos"
-    Confirmar-Lou (($finalLou.Count -eq 9) -and (($finalLou.id | Select-Object -Unique).Count -eq 9)) 'Segundo reinicio sin duplicados'
+    Confirmar-Lou (($finalLou.id -join ',') -eq "1,2,3,4,5,6,7,$idLou") 'Segundo reinicio sin duplicados ni reposición de la semilla archivada'
     Confirmar-Lou (($finalLou | Where-Object id -eq $idLou).precio -eq 23990) 'Segundo reinicio conserva edición y reactivación'
+    Esperar-CodigoLou '/api/productos/8' 'GET' 404
+    $adminFinalLou = Invoke-RestMethod "$baseLou/api/admin/productos" -Headers $cabecerasLou
+    Confirmar-Lou (($adminFinalLou.id -join ',') -eq "1,2,3,4,5,6,7,$idLou") 'El listado administrativo sigue excluyendo la semilla archivada'
+    Esperar-CodigoLou '/api/admin/productos/8' 'DELETE' 404 $null $true
+    $coleccionFinalLou = Invoke-RestMethod "$baseLou$rutaColeccionLou"
+    Confirmar-Lou (($coleccionFinalLou.productos.id -join ',') -eq '1') 'Colección pública excluye el producto archivado tras el segundo reinicio'
+    $coleccionAdminFinalLou = Invoke-RestMethod "$baseLou/api/admin/colecciones/$($coleccionLou.id)" -Headers $cabecerasLou
+    Confirmar-Lou (($coleccionAdminFinalLou.productos -join ',') -eq '1,8') 'La asociación con el producto archivado permanece en administración'
+    Esperar-CodigoLou $rutaCampaniaLou 'GET' 404
+    $campaniaAdminFinalLou = Invoke-RestMethod "$baseLou/api/admin/campanias/$($campaniaLou.id)" -Headers $cabecerasLou
+    Confirmar-Lou (-not $campaniaAdminFinalLou.activa -and $campaniaAdminFinalLou.publicada) 'La campaña desactivada conserva su registro y publicación administrativa'
     $resultadosLou | Set-Content "$carpetaLou/resultados.txt" -Encoding UTF8
     Write-Output "APROBADAS: $($resultadosLou.Count). Evidencia y base aislada: $carpetaLou"
 } finally {

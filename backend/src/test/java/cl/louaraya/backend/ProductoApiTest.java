@@ -86,10 +86,15 @@ class ProductoApiTest {
         mvc.perform(put(ADMIN + "/1").contentType(MediaType.APPLICATION_JSON).content(json(valido()))).andExpect(status().isUnauthorized());
         mvc.perform(patch(ADMIN + "/1/publicacion").contentType(MediaType.APPLICATION_JSON).content("{\"publicado\":false}")).andExpect(status().isUnauthorized());
         mvc.perform(get(ADMIN).with(httpBasic("admin-test", "incorrecta"))).andExpect(status().isUnauthorized());
+        mvc.perform(delete(ADMIN + "/1")).andExpect(status().isUnauthorized());
+        mvc.perform(delete(ADMIN + "/1").with(httpBasic("admin-test", "incorrecta")))
+            .andExpect(status().isUnauthorized());
     }
     @Test @WithMockUser(roles = "CLIENTE") void rolClienteEsRechazadoEnHttpYServicio() throws Exception {
         assertThrows(AccessDeniedException.class, () -> service.crear(valido()));
+        assertThrows(AccessDeniedException.class, () -> service.archivar(1L));
         mvc.perform(get(ADMIN)).andExpect(status().isForbidden());
+        mvc.perform(delete(ADMIN + "/1")).andExpect(status().isForbidden());
     }
     @Test void rechazaCamposInvalidosYJsonInesperado() throws Exception {
         mvc.perform(post(ADMIN).with(httpBasic("admin-test", "SoloPruebas123!")).contentType(MediaType.APPLICATION_JSON)
@@ -101,6 +106,8 @@ class ProductoApiTest {
         mvc.perform(post(ADMIN).with(httpBasic("admin-test", "SoloPruebas123!")).contentType(MediaType.APPLICATION_JSON)
             .content(json(valido()).replace("\"nombre\"", "\"campoAjeno\""))).andExpect(status().isBadRequest());
         mvc.perform(get("/api/productos/no-numero")).andExpect(status().isBadRequest());
+        mvc.perform(delete(ADMIN + "/no-numero").with(httpBasic("admin-test", "SoloPruebas123!")))
+            .andExpect(status().isBadRequest());
     }
     @Test void inexistentesDevuelven404() throws Exception {
         mvc.perform(get("/api/productos/999999")).andExpect(status().isNotFound());
@@ -108,12 +115,38 @@ class ProductoApiTest {
             .contentType(MediaType.APPLICATION_JSON).content(json(valido()))).andExpect(status().isNotFound());
         mvc.perform(patch(ADMIN + "/999999/publicacion").with(httpBasic("admin-test", "SoloPruebas123!"))
             .contentType(MediaType.APPLICATION_JSON).content("{\"publicado\":false}")).andExpect(status().isNotFound());
+        mvc.perform(delete(ADMIN + "/999999").with(httpBasic("admin-test", "SoloPruebas123!")))
+            .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
+    }
+    @Test void archivarConservaLaFilaYExcluyeElProductoDelCrud() throws Exception {
+        var admin = httpBasic("admin-test", "SoloPruebas123!");
+        String ruta = ADMIN + "/1";
+        mvc.perform(delete(ruta).with(admin)).andExpect(status().isNoContent())
+            .andExpect(content().string(""));
+
+        mvc.perform(get("/api/productos/1")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/productos/2")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.disponible").value(true));
+        mvc.perform(get("/api/productos")).andExpect(status().isOk())
+            .andExpect(jsonPath("$[*].id").value(org.hamcrest.Matchers.contains(2, 3, 4, 5, 6, 7, 8)));
+        mvc.perform(get(ADMIN).with(admin)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[*].id").value(org.hamcrest.Matchers.contains(2, 3, 4, 5, 6, 7, 8)));
+
+        mvc.perform(put(ruta).with(admin).contentType(MediaType.APPLICATION_JSON).content(json(valido())))
+            .andExpect(status().isNotFound());
+        mvc.perform(patch(ruta + "/publicacion").with(admin).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"publicado\":true}")).andExpect(status().isNotFound());
+        mvc.perform(delete(ruta).with(admin)).andExpect(status().isNotFound());
+        assertEquals(8, repo.count());
+        assertEquals("Tapiz Bohemio", repo.findById(1L).orElseThrow().getNombre());
     }
     @Test void swaggerYOpenApiDocumentanSeguridadYEndpoints() throws Exception {
         mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Swagger UI")));
         mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
             .andExpect(jsonPath("$.components.securitySchemes.basicAuth.scheme").value("basic"))
             .andExpect(jsonPath("$.paths['/api/admin/productos'].post.security[0].basicAuth").isArray())
+            .andExpect(jsonPath("$.paths['/api/admin/productos/{id}'].delete.security[0].basicAuth").isArray())
+            .andExpect(jsonPath("$.paths['/api/admin/productos/{id}'].delete.responses['204']").exists())
             .andExpect(jsonPath("$.paths['/api/productos'].get").exists());
     }
     @Test void pruebasSoloUsanMemoriaYJava17() throws Exception {

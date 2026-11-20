@@ -32,6 +32,7 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
                 .requestMatchers(HttpMethod.GET, "/api/productos", "/api/productos/*", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/colecciones", "/api/colecciones/*", "/api/campanias", "/api/campanias/*").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/error").permitAll().anyRequest().denyAll())
             .httpBasic(b -> b.authenticationEntryPoint((req, res, ex) -> {

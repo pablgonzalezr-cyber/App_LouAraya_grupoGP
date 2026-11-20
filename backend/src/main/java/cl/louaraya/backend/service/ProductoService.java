@@ -14,15 +14,18 @@ import java.util.List;
 public class ProductoService {
     private final ProductoRepository repo;
     public ProductoService(ProductoRepository repo) { this.repo = repo; }
-    public List<ProductoResponse> publicados() { return repo.findByPublicadoTrueOrderByIdAsc().stream().map(ProductoResponse::desde).toList(); }
-    public ProductoResponse publicado(Long id) { return ProductoResponse.desde(repo.findByIdAndPublicadoTrue(id).orElseThrow(ProductoNoEncontrado::new)); }
+    public List<ProductoResponse> publicados() { return repo.findByPublicadoTrueAndArchivadoFalseOrderByIdAsc().stream().map(ProductoResponse::desde).toList(); }
+    public ProductoResponse publicado(Long id) { return ProductoResponse.desde(repo.findByIdAndPublicadoTrueAndArchivadoFalse(id).orElseThrow(ProductoNoEncontrado::new)); }
     @PreAuthorize("hasRole('ADMIN')")
-    public List<ProductoResponse> todos() { return repo.findAllByOrderByIdAsc().stream().map(ProductoResponse::desde).toList(); }
+    public List<ProductoResponse> todos() { return repo.findByArchivadoFalseOrderByIdAsc().stream().map(ProductoResponse::desde).toList(); }
     @Transactional @PreAuthorize("hasRole('ADMIN')")
     public ProductoResponse crear(ProductoRequest d) { return ProductoResponse.desde(repo.save(new Producto(d))); }
     @Transactional @PreAuthorize("hasRole('ADMIN')")
     public ProductoResponse editar(Long id, ProductoRequest d) { Producto p = buscar(id); p.actualizar(d); return ProductoResponse.desde(p); }
     @Transactional @PreAuthorize("hasRole('ADMIN')")
     public ProductoResponse publicar(Long id, boolean publicado) { Producto p = buscar(id); p.publicar(publicado); return ProductoResponse.desde(p); }
-    private Producto buscar(Long id) { return repo.findById(id).orElseThrow(ProductoNoEncontrado::new); }
+    @Transactional @PreAuthorize("hasRole('ADMIN')")
+    public void archivar(Long id) { buscar(id).archivar(); }
+
+    private Producto buscar(Long id) { return repo.findByIdAndArchivadoFalse(id).orElseThrow(ProductoNoEncontrado::new); }
 }
