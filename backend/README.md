@@ -4,7 +4,7 @@ Backend académico propio y provisional, independiente del supuesto servidor de 
 
 ## Inicio desde PowerShell de Android Studio
 
-Desde la raíz `C:\Users\pablo\AndroidStudioProjects\AppLouAraya_grupoGP`:
+Desde la raíz del repositorio, en PowerShell:
 
 ```powershell
 $env:LOU_ADMIN_USUARIO = 'admin-demo'
@@ -105,6 +105,8 @@ Los errores de validación devuelven **400** con ProblemDetail y un mapa `errore
 Los cambios manuales en desarrollo quedan en `backend/data/lou-araya.mv.db`. **No borres ese archivo para reiniciar**. El script de inicio siempre cambia a `backend`, por lo que la ruta relativa es estable.
 
 ## Persistencia e inicialización
+
+Este microservicio es dueño de la tabla `productos` y de su secuencia de IDs. El futuro microservicio de cotizaciones deberá ejecutarse en otro puerto y tener su propia base de datos, con un archivo distinto si también usa H2. El perfil `test` usa una base H2 en memoria separada y la verificación HTTP crea su propio archivo bajo `backend/verification/`.
 
 H2 de desarrollo: `jdbc:h2:file:./data/lou-araya;DB_CLOSE_ON_EXIT=FALSE`. Hibernate usa `ddl-auto=update` para esta etapa académica. No hay `create-drop` en desarrollo. Los ocho productos se copiaron de ProductosDemo.kt conservando nombres, descripciones, medidas, precios, disponibilidad e IDs 1–8. El INSERT inicial solo actúa si falta ese ID; no sobrescribe un producto existente. Una secuencia independiente comienza en 9, evitando colisionar con los IDs reservados y conservando su avance en disco.
 
