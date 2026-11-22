@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import com.example.applouaraya_grupogp.data.AppDatabase
 import com.example.applouaraya_grupogp.data.FavoritosDatabase
 import com.example.applouaraya_grupogp.repository.ProductosRepository
@@ -30,7 +32,7 @@ import com.example.applouaraya_grupogp.viewmodel.FavoritosViewModel
 @Composable
 fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos: Boolean = false,
                    repositorio: ProductosRepository? = null, productoInicial: Int? = null,
-                   repositorioFavoritos: FavoritosRepository? = null) {
+                   repositorioFavoritos: FavoritosRepository? = null, onFavoritosLocales: (() -> Unit)? = null) {
     val contexto = LocalContext.current.applicationContext
     val repo = remember(contexto, repositorio) { repositorio ?: ProductosRepository(AppDatabase.obtener(contexto)) }
     val factory = remember(repo) { viewModelFactory { initializer { CatalogoViewModel(repo) } } }
@@ -41,33 +43,54 @@ fun CatalogoScreen(onVolver: () -> Unit, usuarioId: Long? = null, abrirFavoritos
     } }
     val favoritosVm: FavoritosViewModel = viewModel(factory = favoritosFactory)
     val estado by catalogoVm.estado.collectAsState()
+    val detalle by catalogoVm.detalle.collectAsState()
     val favoritos by favoritosVm.ids.collectAsState()
+    val favoritosVisibles = estado.todos.filter { repo.idFavorito(it.id) in favoritos }.map { it.id }.toSet()
     val puedeGuardar = usuarioId != null && usuarioId > 0L
     LaunchedEffect(usuarioId) { favoritosVm.seleccionarUsuario(usuarioId) }
     var vista by rememberSaveable { mutableStateOf(if (productoInicial != null) "detalle" else if (abrirFavoritos) "favoritos" else "catalogo") }
     var detalleId by rememberSaveable { mutableIntStateOf(productoInicial ?: -1) }
+    LaunchedEffect(vista, detalleId) { catalogoVm.cargarDetalle(detalleId.takeIf { vista == "detalle" }) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (repo.remoto != null) {
+            catalogoVm.cargar()
+            if (vista == "detalle") catalogoVm.cargarDetalle(detalleId)
+        }
+    }
     BackHandler(enabled = vista != "catalogo") { vista = "catalogo" }
     when (vista) {
         "detalle" -> {
-            val producto = estado.todos.firstOrNull { it.id == detalleId }
+            val producto = detalle.producto.takeIf { detalle.id == detalleId }
             if (producto == null) {
-                if (!estado.cargando) LaunchedEffect(detalleId) { vista = "catalogo" }
+                AdaptiveSurface {
+                    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
+                        LouBackButton({ vista = "catalogo" }, "← Catálogo")
+                        val error = detalle.error.takeIf { detalle.id == detalleId }
+                        if (error == null) LinearProgressIndicator(Modifier.fillMaxWidth())
+                        else {
+                            Text(error, color = MaterialTheme.colorScheme.error)
+                            TextButton(onClick = { catalogoVm.cargarDetalle(detalleId) }) { Text("Reintentar") }
+                        }
+                    }
+                }
             } else {
-                DetalleProductoScreen(producto, producto.id in favoritos, puedeGuardar,
+                DetalleProductoScreen(producto, repo.idFavorito(producto.id) in favoritos, puedeGuardar,
                     onVolver = { vista = "catalogo" },
-                    onFavorito = { favoritosVm.alternar(usuarioId, producto.id) })
+                    onFavorito = { favoritosVm.alternar(usuarioId, repo.idFavorito(producto.id)) })
             }
         }
-        "favoritos" -> FavoritosScreen(estado.todos, favoritos,
+        "favoritos" -> FavoritosScreen(estado.todos, favoritosVisibles,
             onVolver = { vista = "catalogo" },
             onAbrir = { detalleId = it; vista = "detalle" },
-            onQuitar = { favoritosVm.alternar(usuarioId, it) })
-        else -> CatalogoContenido(estado, favoritos, puedeGuardar, onVolver,
+            onQuitar = { favoritosVm.alternar(usuarioId, repo.idFavorito(it)) },
+            onFavoritosLocales = onFavoritosLocales.takeIf { repo.remoto != null },
+            cargando = estado.cargando, error = estado.error, onReintentar = catalogoVm::cargar)
+        else -> CatalogoContenido(estado, favoritosVisibles, puedeGuardar, onVolver,
             { vista = "favoritos" }, catalogoVm::cambiarConsulta,
             catalogoVm::cambiarCategoria, catalogoVm::cambiarDisponibles,
             catalogoVm::cambiarOrdenPrecio, catalogoVm::cargar,
             { detalleId = it; vista = "detalle" },
-            { favoritosVm.alternar(usuarioId, it) })
+            { favoritosVm.alternar(usuarioId, repo.idFavorito(it)) })
     }
 }
 
@@ -124,10 +147,12 @@ fun CatalogoContenido(estado: CatalogoUiState, favoritos: Set<Int>, puedeGuardar
                     if (estado.cargando) LinearProgressIndicator(Modifier.fillMaxWidth())
                     estado.error?.let { mensaje ->
                         Text(mensaje, color = MaterialTheme.colorScheme.error)
-                        TextButton(onClick = onReintentar) { Text("Reintentar") }
+                    }
+                    if (!estado.cargando) TextButton(onClick = onReintentar) {
+                        Text(if (estado.error == null) "Actualizar catálogo" else "Reintentar")
                     }
                     LouSectionTitle("${estado.productos.size} diseños encontrados")
-                    if (estado.productos.isEmpty()) {
+                    if (!estado.cargando && estado.error == null && estado.productos.isEmpty()) {
                         LouPanel(Modifier.fillMaxWidth()) {
                             Text("No encontramos productos con esos filtros.",
                                 color = LouColors.TextoSecundario)

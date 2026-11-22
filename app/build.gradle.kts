@@ -5,6 +5,12 @@ plugins {
 
 }
 
+fun urlCatalogoLiteral(url: String): String =
+    "\"" + url.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+val urlCatalogo = providers.gradleProperty("louCatalogoUrl")
+val urlCatalogoAdmin = providers.gradleProperty("louCatalogoAdminUrl")
+
 android {
     namespace = "com.example.applouaraya_grupogp"
     compileSdk {
@@ -22,7 +28,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            val publica = urlCatalogo.orElse("http://127.0.0.1:8095/").get()
+            buildConfigField("String", "CATALOGO_URL", urlCatalogoLiteral(publica))
+            buildConfigField("String", "CATALOGO_ADMIN_URL", urlCatalogoLiteral(urlCatalogoAdmin.orElse(publica).get()))
+        }
         release {
+            val publica = urlCatalogo.orElse("").get()
+            buildConfigField("String", "CATALOGO_URL", urlCatalogoLiteral(publica))
+            buildConfigField("String", "CATALOGO_ADMIN_URL", urlCatalogoLiteral(urlCatalogoAdmin.orElse(publica).get()))
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
@@ -35,6 +49,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
 }
@@ -42,6 +57,8 @@ android {
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("org.maplibre.gl:android-sdk-opengl:13.7.1")
     implementation("androidx.camera:camera-camera2:1.5.3")
     implementation("androidx.camera:camera-lifecycle:1.5.3")

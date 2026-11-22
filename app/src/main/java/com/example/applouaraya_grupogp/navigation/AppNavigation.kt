@@ -39,6 +39,13 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
     } }
     val sesionVm: SesionViewModel = viewModel(factory = sesionFactory)
     val productosRepo = remember(db, sesionVm) { ProductosRepository(db) { sesionVm.estado.value.usuarioId } }
+    val catalogoRepo = remember(db, sesionVm, contexto, basePrueba) {
+        if (basePrueba != null) productosRepo else {
+            val fotos = contexto.getSharedPreferences("lou_catalogo_fotos", Context.MODE_PRIVATE)
+            val remoto = ProductosRemotos(fotos, db.productoDao()::buscar)
+            ProductosRepository(db, remoto) { sesionVm.estado.value.usuarioId }
+        }
+    }
     val contenidoRepo = remember(db, productosRepo) { ContenidoRepository(db, productosRepo) }
     val sesion by sesionVm.estado.collectAsState()
     val preferenciasRepo = remember(contexto, preferenciasPrueba) {
@@ -184,7 +191,9 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
                     PerfilScreen(vm, config.preferencias, config.guardando, config.error, configVm::guardar,
                         onVolver = { nav.popBackStack() }, onCerrarSesion = { pedirSalida("bienvenida") }, onCambiarUsuario = { pedirSalida("login") })
                 } }
-                composable("catalogo") { RutaPrivada("catalogo", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
+                composable("catalogo") { RutaPrivada("catalogo", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() },
+                    usuarioId = id, repositorio = catalogoRepo, repositorioFavoritos = favoritosPrueba,
+                    onFavoritosLocales = { abrir("favoritos-locales") }) } }
                 composable("escaner") { RutaPrivada("escaner", sesion) {
                     val factory = remember(db) { viewModelFactory { initializer { QrViewModel(QrRepository(db.productoDao())) } } }
                     val vm: QrViewModel = viewModel(factory = factory)
@@ -201,10 +210,14 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
                     val vm: MapaViewModel = viewModel()
                     MapaScreen(vm, onVolver = { nav.popBackStack() })
                 } }
-                composable("favoritos") { RutaPrivada("favoritos", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id, abrirFavoritos = true, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
+                composable("favoritos") { RutaPrivada("favoritos", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() },
+                    usuarioId = id, abrirFavoritos = true, repositorio = catalogoRepo, repositorioFavoritos = favoritosPrueba,
+                    onFavoritosLocales = { abrir("favoritos-locales") }) } }
+                composable("favoritos-locales") { RutaPrivada("favoritos-locales", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() },
+                    usuarioId = id, abrirFavoritos = true, repositorio = productosRepo, repositorioFavoritos = favoritosPrueba) } }
                 composable("admin/productos") { RutaPrivada("admin/productos", sesion) {
-                    val factory = remember(productosRepo) { viewModelFactory { initializer { AdminProductosViewModel(productosRepo) } } }
-                    val vm: AdminProductosViewModel = viewModel(factory = factory)
+                    val factory = remember(catalogoRepo, sesion.usuarioId) { viewModelFactory { initializer { AdminProductosViewModel(catalogoRepo) } } }
+                    val vm: AdminProductosViewModel = viewModel(key = "admin-productos-${sesion.usuarioId}", factory = factory)
                     AdminProductosScreen(vm, onVolver = { nav.popBackStack() })
                 } }
                 composable("admin/contenido") { RutaPrivada("admin/contenido", sesion) {

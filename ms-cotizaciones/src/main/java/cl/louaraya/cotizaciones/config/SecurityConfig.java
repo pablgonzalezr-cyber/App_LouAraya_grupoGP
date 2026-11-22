@@ -36,7 +36,7 @@ public class SecurityConfig {
         final UserDetails admin = User.withUsername(adminUsuario)
                 .password(encoder.encode(adminClave)).roles("ADMIN").build();
         return nombre -> {
-            if (nombre.equals(adminUsuario)) return admin;
+            if (nombre.equals(adminUsuario)) return User.withUserDetails(admin).build();
             return clientes.findByCorreo(nombre.trim().toLowerCase(Locale.ROOT))
                     .map(c -> User.withUsername(c.getCorreo()).password(c.getClaveHash()).roles("CLIENTE").build())
                     .orElseThrow(() -> new UsernameNotFoundException("Cuenta desconocida"));

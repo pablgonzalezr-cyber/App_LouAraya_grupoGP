@@ -259,3 +259,43 @@ Sin commits, push ni merges. No se avanzó a cotizaciones, Retrofit ni otras eta
 - [Compatibilidad springdoc 2.x / Boot 3.5.x](https://springdoc.org/v2/).
 - [Maven Wrapper](https://maven.apache.org/wrapper/).
 - [API oficial de Eclipse Adoptium](https://api.adoptium.net/).
+
+## Android con Retrofit para productos
+
+El APK debug consulta `http://127.0.0.1:8095/` de forma predeterminada. En un Samsung, esa dirección pertenece al teléfono. ADB reenvía el puerto del teléfono al mismo puerto en Windows por USB mientras el dispositivo esté conectado y autorizado. Spring puede seguir escuchando en `127.0.0.1` en Windows.
+
+```powershell
+adb devices -l
+adb reverse tcp:8095 tcp:8095
+adb reverse --list
+.\gradlew.bat assembleDebug
+```
+
+Usa `-PlouCatalogoUrl=http://10.0.2.2:8095/` para acceder al host desde un emulador Android estándar sin `adb reverse`. La excepción HTTP de debug está limitada a esas dos direcciones. Para release configura `-PlouCatalogoUrl=https://…/`; sin una URL, el catálogo mostrará un error de configuración. Conserva la barra final en ambas URLs.
+
+### Demostración administrativa por USB
+
+Usa Java 17 y activa TLS en la misma instancia de Spring. El almacén PKCS12 debe contener la clave privada y el certificado de servidor con SAN de tipo IP para `127.0.0.1`, firmado por una CA de desarrollo. Instala en el Samsung únicamente el certificado público de esa CA como certificado de usuario. El APK debug lo acepta en las direcciones locales configuradas y sigue verificando el certificado y el nombre. Mantén la clave privada y la contraseña del almacén fuera del repositorio.
+
+```powershell
+$env:SERVER_SSL_ENABLED = 'true'
+$env:SERVER_SSL_KEY_STORE = 'C:\ruta\catalogo-dev.p12'
+$env:SERVER_SSL_KEY_STORE_TYPE = 'PKCS12'
+# Define SERVER_SSL_KEY_STORE_PASSWORD, LOU_ADMIN_USUARIO y LOU_ADMIN_CLAVE
+# en esta terminal antes de iniciar el backend.
+.\backend\Start-Backend.ps1
+```
+
+En otra terminal, compila debug con `-PlouCatalogoUrl=https://127.0.0.1:8095/` y conserva el mismo reenvío ADB. Si tienes un acceso HTTPS administrativo separado, usa además `-PlouCatalogoAdminUrl=https://…/`. Inicia sesión en Android con el rol administrativo local y escribe la cuenta de Spring en **Administrar productos**. La app conserva la credencial HTTP Basic en memoria mientras vive el panel. **Cambiar cuenta** permite descartarla y volver a autenticarse.
+
+### Convivencia con Room
+
+Retrofit obtiene la lista publicada y el detalle público. En administración, cada mutación confirmada vuelve a consultar el listado administrativo e invalida las consultas públicas activas. El catálogo también se actualiza al volver a la pantalla y admite actualización manual.
+
+Los ocho IDs de muestra comparten las fotografías y favoritos históricos. Para el resto, los favoritos remotos usan claves distintas de los productos locales. Los favoritos anteriores siguen accesibles desde **Ver favoritos locales**. QR, colecciones y campañas conservan su flujo local. Las fotos elegidas en el panel se conservan en el dispositivo y se asocian al ID remoto después de que Spring confirma el guardado. El contrato no incluye campos de imagen ni subida de archivos.
+
+El contrato de red lleva IDs `Long` y valores `BigDecimal`. Android comprueba el rango del ID antes de adaptarlo a `Int`. El formulario remoto conserva los decimales del servidor. Las tarjetas y la ficha reutilizan la presentación entera de Android.
+
+### Prueba de integración
+
+`ProductosRetrofitTest` activa el recorrido completo cuando se define `LOU_PRUEBA_RETROFIT_URL`. Úsalo únicamente con una instancia desechable con H2 en memoria, datos iniciales y TLS. Define también `LOU_PRUEBA_RETROFIT_TRUSTSTORE`, `LOU_PRUEBA_RETROFIT_TRUSTSTORE_CLAVE`, `LOU_ADMIN_USUARIO` y `LOU_ADMIN_CLAVE` en la terminal de prueba. Ejecuta `.\gradlew.bat :app:testDebugUnitTest --rerun --tests "*ProductosRetrofitTest"`. La prueba crea, edita, oculta, republica y archiva un producto de prueba.

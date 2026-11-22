@@ -13,7 +13,9 @@ import com.example.applouaraya_grupogp.ui.design.*
 
 @Composable
 fun FavoritosScreen(productos: List<Producto>, idsFavoritos: Set<Int>,
-                    onVolver: () -> Unit, onAbrir: (Int) -> Unit, onQuitar: (Int) -> Unit) {
+                    onVolver: () -> Unit, onAbrir: (Int) -> Unit, onQuitar: (Int) -> Unit,
+                    onFavoritosLocales: (() -> Unit)? = null, cargando: Boolean = false,
+                    error: String? = null, onReintentar: () -> Unit = {}) {
     val favoritos = productos.filter { it.id in idsFavoritos }
     AdaptiveSurface {
         LazyVerticalGrid(columns = GridCells.Fixed(columnasPara(LocalLouWidth.current)),
@@ -26,8 +28,14 @@ fun FavoritosScreen(productos: List<Producto>, idsFavoritos: Set<Int>,
                     LouBackButton(onVolver, "← Volver al catálogo")
                     LouEyebrow("TUS SELECCIONES")
                     LouPageHeading("Mis favoritos", "Guarda y encuentra tus diseños preferidos")
+                    onFavoritosLocales?.let { TextButton(onClick = it) { Text("Ver favoritos locales") } }
+                    if (cargando) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if (error != null) {
+                        Text(error, color = MaterialTheme.colorScheme.error)
+                        TextButton(onClick = onReintentar) { Text("Reintentar") }
+                    }
                     LouBadge("${favoritos.size} piezas guardadas")
-                    if (favoritos.isEmpty()) {
+                    if (!cargando && error == null && favoritos.isEmpty()) {
                         LouPanel(Modifier.fillMaxWidth()) {
                             Text("Aún no tienes diseños favoritos.",
                                 style = MaterialTheme.typography.titleMedium, color = LouColors.Cafe)

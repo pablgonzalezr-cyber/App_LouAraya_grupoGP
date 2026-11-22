@@ -1,0 +1,22 @@
+ backend/README.md                                  |  23 [32m++[m[31m-[m
+ backend/Verify-Backend.ps1                         |  29 [32m+++[m
+ .../cl/louaraya/backend/config/SecurityConfig.java |   1 [32m+[m
+ .../backend/controller/CampaniaController.java     |  85 [32m++++++++[m
+ .../backend/controller/ColeccionController.java    |  85 [32m++++++++[m
+ .../cl/louaraya/backend/dto/CampaniaRequest.java   |  18 [32m++[m
+ .../cl/louaraya/backend/dto/CampaniaResponse.java  |   6 [32m+[m
+ .../cl/louaraya/backend/dto/ColeccionRequest.java  |  33 [32m+++[m
+ .../cl/louaraya/backend/dto/ColeccionResponse.java |   9 [32m+[m
+ .../backend/dto/PublicacionContenidoRequest.java   |   5 [32m+[m
+ .../backend/exception/ApiExceptionHandler.java     |  12 [32m++[m
+ .../backend/exception/ContenidoInvalido.java       |  14 [32m++[m
+ .../backend/exception/ContenidoNoEncontrado.java   |   5 [32m+[m
+ .../cl/louaraya/backend/model/entity/Campania.java |  47 [32m+++++[m
+ .../louaraya/backend/model/entity/Coleccion.java   |  52 [32m+++++[m
+ .../cl/louaraya/backend/model/entity/Producto.java |   1 [32m+[m
+ .../backend/repository/CampaniaRepository.java     |  28 [32m+++[m
+ .../backend/repository/ColeccionRepository.java    |  21 [32m++[m
+ .../louaraya/backend/service/CampaniaService.java  | 102 [32m+++++++++[m
+ .../louaraya/backend/service/ColeccionService.java | 111 [32m++++++++++[m
+ .../java/cl/louaraya/backend/ContenidoApiTest.java | 227 [32m+++++++++++++++++++++[m
+ 21 files changed, 913 insertions(+), 1 deletion(-)

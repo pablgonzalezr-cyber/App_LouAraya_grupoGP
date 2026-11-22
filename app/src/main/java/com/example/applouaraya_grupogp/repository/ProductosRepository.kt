@@ -6,7 +6,8 @@ import com.example.applouaraya_grupogp.validation.ProductoFormulario
 import com.example.applouaraya_grupogp.validation.ProductoValidator
 import kotlinx.coroutines.flow.*
 
-class ProductosRepository(private val db: AppDatabase, private val usuarioAutenticado: () -> Long? = { null }) {
+class ProductosRepository(private val db: AppDatabase, val remoto: ProductosRemotos? = null,
+                          private val usuarioAutenticado: () -> Long? = { null }) {
     suspend fun inicializar() { db.productoDao().insertarIniciales(ProductosDemo.productos) }
     suspend fun exigirAdministrador(): Long {
         val id = usuarioAutenticado() ?: throw SecurityException("Inicia sesión nuevamente")
@@ -14,10 +15,18 @@ class ProductosRepository(private val db: AppDatabase, private val usuarioAutent
         if (usuarioAutenticado() != id) throw SecurityException("La sesión cambió")
         return id
     }
-    fun observarPublicados() = flow {
+    fun observarPublicados() = remoto?.observarPublicados() ?: flow {
         inicializar()
         emitAll(db.productoDao().observarPublicados())
     }
+    fun observarDetalle(id: Int) = remoto?.observarDetalle(id) ?: observarPublicados().map { lista ->
+        lista.firstOrNull { it.id == id } ?: error("El producto ya no está disponible.")
+    }
+
+    // Los ocho productos iniciales comparten identidad con Spring. Los demás
+    // favoritos remotos usan IDs negativos para evitar colisiones con Room.
+    fun idFavorito(id: Int): Int =
+        if (remoto == null || ProductosDemo.productos.any { it.id == id }) id else -id
     fun observarAdministracion() = flow {
         val id = exigirAdministrador()
         inicializar()

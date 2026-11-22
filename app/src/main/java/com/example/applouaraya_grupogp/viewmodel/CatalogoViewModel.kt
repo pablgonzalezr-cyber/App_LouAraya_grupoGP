@@ -22,10 +22,16 @@ data class CatalogoUiState(
     val error: String? = null
 )
 
+data class DetalleCatalogoState(val id: Int? = null, val producto: Producto? = null,
+                               val error: String? = null)
+
 class CatalogoViewModel(private val repositorio: ProductosRepository) : ViewModel() {
     private val _estado = MutableStateFlow(CatalogoUiState())
     val estado = _estado.asStateFlow()
     private var trabajo: Job? = null
+    private val _detalle = MutableStateFlow(DetalleCatalogoState())
+    val detalle = _detalle.asStateFlow()
+    private var trabajoDetalle: Job? = null
     init { cargar() }
     fun cargar() {
         trabajo?.cancel()
@@ -34,7 +40,21 @@ class CatalogoViewModel(private val repositorio: ProductosRepository) : ViewMode
             try { repositorio.observarPublicados().collect { lista ->
                 actualizar { it.copy(todos = lista, cargando = false) }
             } } catch (e: CancellationException) { throw e
-            } catch (_: Exception) { _estado.value = _estado.value.copy(cargando = false, error = "No se pudo cargar el catálogo") }
+            } catch (e: Exception) { _estado.value = _estado.value.copy(cargando = false, error = e.message ?: "No se pudo cargar el catálogo") }
+        }
+    }
+    fun cargarDetalle(id: Int?) {
+        trabajoDetalle?.cancel()
+        _detalle.value = DetalleCatalogoState(id = id)
+        if (id == null) return
+        trabajoDetalle = viewModelScope.launch {
+            try {
+                repositorio.observarDetalle(id).collect { _detalle.value = DetalleCatalogoState(id, it) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _detalle.value = DetalleCatalogoState(id, error = e.message ?: "No se pudo consultar el producto.")
+            }
         }
     }
     fun cambiarConsulta(valor: String) = actualizar { it.copy(consulta = valor) }

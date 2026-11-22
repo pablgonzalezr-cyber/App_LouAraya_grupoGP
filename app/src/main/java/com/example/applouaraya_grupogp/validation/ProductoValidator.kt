@@ -1,6 +1,7 @@
 package com.example.applouaraya_grupogp.validation
 
 import com.example.applouaraya_grupogp.model.Producto
+import java.math.BigDecimal
 
 data class ProductoFormulario(
     val id: Int = 0, val nombre: String = "", val descripcion: String = "",
@@ -17,6 +18,23 @@ data class ProductoFormulario(
 }
 
 object ProductoValidator {
+    fun validarRemoto(f: ProductoFormulario): Map<String, String> = buildMap {
+        listOf("nombre" to f.nombre, "material" to f.material, "categoria" to f.categoria,
+            "descripcion" to f.descripcion).forEach { (campo, texto) ->
+            val maximo = if (campo == "descripcion") 2000 else 100
+            if (texto.trim().length !in 1..maximo) put(campo, "Ingresa entre 1 y $maximo caracteres")
+        }
+        listOf("ancho" to f.ancho, "largo" to f.largo, "precio" to f.precio).forEach { (campo, texto) ->
+            val valor = texto.trim().replace(',', '.')
+            val maximo = if (campo == "precio") "999999999.99" else "10000"
+            if (!Regex("[0-9]+(\\.[0-9]{1,2})?").matches(valor) ||
+                valor.toBigDecimal() !in BigDecimal("0.01")..BigDecimal(maximo)) {
+                put(campo, "Ingresa un valor entre 0,01 y $maximo con hasta dos decimales")
+            }
+        }
+        if (f.imagenArchivo.isNotEmpty() && !Regex("[a-f0-9-]{36}\\.img").matches(f.imagenArchivo)) put("imagen", "Imagen local no válida")
+    }
+
     val categorias = listOf("Interiores", "Matrimonios", "Festivales", "Otro")
     fun validar(f: ProductoFormulario): Map<String, String> = buildMap {
         if (f.nombre.trim().length !in 2..100) put("nombre", "Ingresa entre 2 y 100 caracteres")
