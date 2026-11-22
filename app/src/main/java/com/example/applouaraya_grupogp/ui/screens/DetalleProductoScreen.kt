@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.applouaraya_grupogp.viewmodel.DolarViewModel
+import java.time.format.DateTimeFormatter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
@@ -15,6 +18,26 @@ import com.example.applouaraya_grupogp.ui.components.ImagenProducto
 import com.example.applouaraya_grupogp.ui.design.*
 import java.text.NumberFormat
 import java.util.Locale
+
+@Composable
+private fun PrecioReferencialUsd(precioClp: Int, vm: DolarViewModel = viewModel()) {
+    val estado by vm.estado.collectAsState()
+    LaunchedEffect(Unit) { vm.cargar() }
+    Column {
+        estado.consulta.indicador?.let { dolar ->
+            val monto = NumberFormat.getNumberInstance(Locale.forLanguageTag("es-CL")).apply {
+                minimumFractionDigits = 2
+                maximumFractionDigits = 2
+            }.format(dolar.convertir(precioClp))
+            Text("≈ USD $monto · Referencial", color = LouColors.Cafe)
+            Text("Dólar observado del ${dolar.fecha.format(DateTimeFormatter.ofPattern("dd/MM/uuuu"))}",
+                style = MaterialTheme.typography.bodySmall)
+        }
+        estado.consulta.error?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        if (estado.cargando) Text("Consultando dólar observado…", style = MaterialTheme.typography.bodySmall)
+        else TextButton(onClick = { vm.cargar(true) }) { Text("Actualizar dólar") }
+    }
+}
 
 @Composable
 fun DetalleProductoScreen(producto: Producto, esFavorito: Boolean, permitirFavorito: Boolean,
@@ -33,6 +56,7 @@ fun DetalleProductoScreen(producto: Producto, esFavorito: Boolean, permitirFavor
             LouPageHeading(producto.nombre, "Diseño artesanal Lou Araya")
             Text("$${precio.format(producto.precio)} CLP", style = MaterialTheme.typography.headlineSmall,
                 color = LouColors.Terracota, fontWeight = FontWeight.Bold)
+            PrecioReferencialUsd(producto.precio)
             LouSectionTitle("Detalles de la pieza")
             LouPanel(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

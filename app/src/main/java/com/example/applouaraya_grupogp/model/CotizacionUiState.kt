@@ -17,5 +17,9 @@ data class CotizacionUiState(
     val errores: Map<String, String> = emptyMap(),
     val guardando: Boolean = false,
     val error: String? = null,
-    val guardadaId: Long? = null
+    val guardadaId: Long? = null,
+    val enviandoRemoto: Boolean = false,
+    val registrandoRemoto: Boolean = false,
+    val guardadaRemotaId: Long? = null,
+    val mensajeRemoto: String? = null
 )

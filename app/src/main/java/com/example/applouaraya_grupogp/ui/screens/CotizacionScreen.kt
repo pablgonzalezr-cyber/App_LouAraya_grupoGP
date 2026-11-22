@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.applouaraya_grupogp.ui.adaptive.AdaptiveSurface
@@ -21,9 +22,14 @@ fun CotizacionScreen(usuarioId: Long, onVolver: () -> Unit, onGuardada: (Long) -
                      mostrarAyuda: Boolean = true) {
     val vm: CotizacionViewModel = viewModel()
     val estado by vm.estado.collectAsState()
-    CotizacionContent(estado, onVolver, onGuardada, mostrarAyuda, vm::cambiar) { vm.guardar(usuarioId) }
+    CotizacionContentInterno(estado, onVolver, onGuardada, mostrarAyuda, vm::cambiar,
+        onGuardar = { vm.guardar(usuarioId) },
+        mostrarServidor = true,
+        onRegistrarRemoto = vm::registrarCuentaRemota,
+        onEnviarRemoto = vm::enviarRemoto)
 }
 
+/** Mantiene la firma anterior para los tests y pantallas locales existentes. */
 @Composable
 internal fun CotizacionContent(
     estado: com.example.applouaraya_grupogp.model.CotizacionUiState,
@@ -31,7 +37,37 @@ internal fun CotizacionContent(
     onCambiar: (com.example.applouaraya_grupogp.model.CotizacionFormulario) -> Unit,
     onGuardar: () -> Unit
 ) {
+    CotizacionContentInterno(estado, onVolver, onGuardada, mostrarAyuda,
+        onCambiar, onGuardar, mostrarServidor = false)
+}
+
+@Composable
+private fun CotizacionContentInterno(
+    estado: com.example.applouaraya_grupogp.model.CotizacionUiState,
+    onVolver: () -> Unit, onGuardada: (Long) -> Unit, mostrarAyuda: Boolean = true,
+    onCambiar: (com.example.applouaraya_grupogp.model.CotizacionFormulario) -> Unit,
+    onGuardar: () -> Unit,
+    mostrarServidor: Boolean = false,
+    onRegistrarRemoto: (String, String) -> Unit = { _, _ -> },
+    onEnviarRemoto: (String, String) -> Unit = { _, _ -> }
+) {
+    var correoRemoto by remember { mutableStateOf("") }
+    var claveRemota by remember { mutableStateOf("") }
+    val ocupado = estado.guardando || estado.enviandoRemoto || estado.registrandoRemoto
     val f = estado.formulario
+    if (estado.guardadaRemotaId != null) {
+        AdaptiveSurface {
+            Column(Modifier.fillMaxSize().safeDrawingPadding().padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                LouBackButton(onVolver)
+                LouPageHeading("Cotización enviada al servidor", "Solicitud #${estado.guardadaRemotaId} registrada en Spring Boot.")
+                Text("La confirmación es remota. Esta solicitud no está en el historial local de Room.",
+                    color = LouColors.TextoSecundario)
+                LouPrimaryButton("Volver", onVolver, Modifier.fillMaxWidth())
+            }
+        }
+        return
+    }
     val guardadaId = estado.guardadaId
     if (guardadaId != null) {
         ConfirmacionCotizacion(onVolver = onVolver, onContinuar = { onGuardada(guardadaId) })
@@ -48,28 +84,28 @@ internal fun CotizacionContent(
                 LouSectionTitle("Tu diseño")
                 Text("Completa las características de tu solicitud.", color = LouColors.TextoSecundario)
                 CampoCotizacion("Descripción", f.descripcion, estado.errores["descripcion"],
-                    !estado.guardando, multilinea = true) { onCambiar(f.copy(descripcion = it)) }
+                    !ocupado, multilinea = true) { onCambiar(f.copy(descripcion = it)) }
                 SelectorCotizacion("Categoría",
                     listOf("" to "Selecciona una categoría") + CotizacionValidator.categorias.map { it to it },
-                    f.categoria, !estado.guardando) { onCambiar(f.copy(categoria = it)) }
+                    f.categoria, !ocupado) { onCambiar(f.copy(categoria = it)) }
                 estado.errores["categoria"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                CampoCotizacion("Material", f.material, estado.errores["material"], !estado.guardando) {
+                CampoCotizacion("Material", f.material, estado.errores["material"], !ocupado) {
                     onCambiar(f.copy(material = it))
                 }
             }
             LouPanel(Modifier.fillMaxWidth()) {
                 LouSectionTitle("Medidas y detalles")
                 CampoCotizacion("Ancho (cm)", f.ancho, estado.errores["ancho"],
-                    !estado.guardando, KeyboardType.Decimal) { onCambiar(f.copy(ancho = it)) }
+                    !ocupado, KeyboardType.Decimal) { onCambiar(f.copy(ancho = it)) }
                 CampoCotizacion("Largo / alto (cm)", f.largo, estado.errores["largo"],
-                    !estado.guardando, KeyboardType.Decimal) { onCambiar(f.copy(largo = it)) }
+                    !ocupado, KeyboardType.Decimal) { onCambiar(f.copy(largo = it)) }
                 CampoCotizacion("Cantidad", f.cantidad, estado.errores["cantidad"],
-                    !estado.guardando, KeyboardType.Number) { onCambiar(f.copy(cantidad = it)) }
+                    !ocupado, KeyboardType.Number) { onCambiar(f.copy(cantidad = it)) }
                 CampoCotizacion("Fecha requerida (opcional, dd/mm/aaaa)", f.fecha,
-                    estado.errores["fecha"], !estado.guardando) { onCambiar(f.copy(fecha = it)) }
+                    estado.errores["fecha"], !ocupado) { onCambiar(f.copy(fecha = it)) }
                 SelectorCotizacion("Producto de referencia (opcional)",
                     listOf("" to "Sin referencia") + estado.productosReferencia.map { it.id.toString() to it.nombre },
-                    f.productoId?.toString() ?: "", !estado.guardando) {
+                    f.productoId?.toString() ?: "", !ocupado) {
                     onCambiar(f.copy(productoId = it.toIntOrNull()))
                 }
                 estado.errores["producto"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -78,14 +114,44 @@ internal fun CotizacionContent(
                 LouPanel(Modifier.fillMaxWidth()) {
                     Text("Importante", style = MaterialTheme.typography.titleMedium,
                         color = LouColors.Cafe)
-                    Text("Tu solicitud se guardará en este dispositivo. No se envía a Lou Araya por Internet.",
+                    Text(if (mostrarServidor)
+                        "Guardar solicitud conserva una copia local. Para enviarla a Spring Boot, usa la opción del servidor."
+                        else "Tu solicitud se guardará en este dispositivo. No se envía a Lou Araya por Internet.",
                         style = MaterialTheme.typography.bodySmall, color = LouColors.TextoSecundario)
+                }
+            }
+            if (mostrarServidor) {
+                LouPanel(Modifier.fillMaxWidth()) {
+                    LouSectionTitle("Enviar al servidor de cotizaciones")
+                    Text("El servicio tiene una cuenta independiente de la sesión local. Usa sus credenciales o crea una cuenta nueva.",
+                        style = MaterialTheme.typography.bodySmall, color = LouColors.TextoSecundario)
+                    OutlinedTextField(value = correoRemoto, onValueChange = { correoRemoto = it },
+                        label = { Text("Correo del servicio") }, enabled = !ocupado,
+                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = claveRemota, onValueChange = { claveRemota = it },
+                        label = { Text("Contraseña del servicio") }, enabled = !ocupado,
+                        singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth())
+                    estado.mensajeRemoto?.let { Text(it, color = LouColors.TextoSecundario) }
+                    OutlinedButton(onClick = {
+                        onRegistrarRemoto(correoRemoto, claveRemota)
+                    }, enabled = !ocupado && correoRemoto.isNotBlank() && claveRemota.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(if (estado.registrandoRemoto) "Creando cuenta…" else "Crear cuenta del servicio")
+                    }
+                    LouPrimaryButton(if (estado.enviandoRemoto) "Enviando…" else "Enviar a Spring Boot", {
+                        onEnviarRemoto(correoRemoto, claveRemota)
+                        claveRemota = ""
+                    }, Modifier.fillMaxWidth(),
+                        enabled = !ocupado && correoRemoto.isNotBlank() && claveRemota.isNotBlank())
                 }
             }
             estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             LouPrimaryButton(if (estado.guardando) "Guardando…" else "Guardar solicitud",
                 onGuardar, Modifier.fillMaxWidth(),
-                enabled = !estado.guardando)
+                enabled = !ocupado)
             Spacer(Modifier.height(14.dp))
         }
     }

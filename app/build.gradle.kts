@@ -1,4 +1,5 @@
 plugins {
+    jacoco
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp") version "2.3.10"
@@ -9,6 +10,7 @@ fun urlCatalogoLiteral(url: String): String =
     "\"" + url.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 val urlCatalogo = providers.gradleProperty("louCatalogoUrl")
+val urlCotizaciones = providers.gradleProperty("louCotizacionesUrl")
 val urlCatalogoAdmin = providers.gradleProperty("louCatalogoAdminUrl")
 
 android {
@@ -29,11 +31,14 @@ android {
 
     buildTypes {
         debug {
+            enableAndroidTestCoverage = providers.gradleProperty("louCoberturaSamsung").orNull == "true"
+            buildConfigField("String", "COTIZACIONES_URL", urlCatalogoLiteral(urlCotizaciones.orElse("http://127.0.0.1:8096/").get()))
             val publica = urlCatalogo.orElse("http://127.0.0.1:8095/").get()
             buildConfigField("String", "CATALOGO_URL", urlCatalogoLiteral(publica))
             buildConfigField("String", "CATALOGO_ADMIN_URL", urlCatalogoLiteral(urlCatalogoAdmin.orElse(publica).get()))
         }
         release {
+            buildConfigField("String", "COTIZACIONES_URL", urlCatalogoLiteral(urlCotizaciones.orElse("").get()))
             val publica = urlCatalogo.orElse("").get()
             buildConfigField("String", "CATALOGO_URL", urlCatalogoLiteral(publica))
             buildConfigField("String", "CATALOGO_ADMIN_URL", urlCatalogoLiteral(urlCatalogoAdmin.orElse(publica).get()))
@@ -52,6 +57,34 @@ android {
         buildConfig = true
     }
     sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
+}
+
+jacoco { toolVersion = "0.8.14" }
+
+// Clase original, antes de instrumentar. Los paquetes forman el denominador
+// completo de cada informe; no se filtran ViewModels ni repositorios individuales.
+val clasesDebug = layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")
+for ((nombre, logica) in listOf("coberturaDebug" to false, "coberturaLogicaDebug" to true)) {
+    tasks.register<JacocoReport>(nombre) {
+        dependsOn("testDebugUnitTest")
+        val arbol = fileTree(clasesDebug) {
+            exclude("**/*_Impl*.class", "**/ComposableSingletons*.class")
+            if (logica) {
+                include("**/validation/**", "**/repository/**", "**/viewmodel/**", "**/model/**",
+                    "**/navigation/PoliticaNavegacion*.class")
+            }
+        }
+        classDirectories.setFrom(arbol)
+        sourceDirectories.setFrom("src/main/java")
+        executionData.from(layout.buildDirectory.file("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"))
+        if (providers.gradleProperty("louCoberturaSamsung").orNull == "true") {
+            executionData.from(fileTree(layout.buildDirectory.dir("coverage-samsung")) { include("*.ec") })
+        }
+        reports {
+            html.required.set(true)
+            xml.required.set(true)
+        }
+    }
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
@@ -77,6 +110,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     testImplementation(libs.junit)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
