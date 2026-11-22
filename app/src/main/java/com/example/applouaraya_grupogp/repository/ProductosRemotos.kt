@@ -114,7 +114,7 @@ class ProductosRemotos(
         cambios.value++
     }
 
-    private suspend fun producto(r: ProductoRespuesta): Producto {
+    internal suspend fun producto(r: ProductoRespuesta): Producto {
         val id = r.idAndroid()
         val semilla = ProductosDemo.productos.firstOrNull { it.id == id }
         val local = if (semilla != null) buscarSemillaLocal(id) ?: semilla else null
@@ -134,7 +134,10 @@ class ProductosRemotos(
 
         private fun entero(valor: BigDecimal): Int = valor.setScale(0, RoundingMode.HALF_UP).intValueExact()
 
-        internal fun api(valor: String, administrativa: Boolean): ProductosApi {
+        internal fun api(valor: String, administrativa: Boolean): ProductosApi =
+            retrofit(valor, administrativa).create(ProductosApi::class.java)
+
+        internal fun retrofit(valor: String, administrativa: Boolean): Retrofit {
             val url = HttpUrl.parse(valor)
             require(url != null && url.username().isEmpty() && url.password().isEmpty() && url.encodedPath().endsWith('/') &&
                 url.query() == null && url.fragment() == null) { "Configura una URL de catálogo válida terminada en /." }
@@ -144,17 +147,20 @@ class ProductosRemotos(
             val cliente = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
                 .retryOnConnectionFailure(false).build()
             return Retrofit.Builder().baseUrl(url).client(cliente)
-                .addConverterFactory(GsonConverterFactory.create()).build().create(ProductosApi::class.java)
+                .addConverterFactory(GsonConverterFactory.create()).build()
         }
 
-        internal suspend fun <T> consultar(bloque: suspend () -> T): T = try {
+        internal suspend fun <T> consultar(bloque: suspend () -> T): T =
+            consultar("El producto ya no está disponible (404).", bloque)
+
+        internal suspend fun <T> consultar(noEncontrado: String, bloque: suspend () -> T): T = try {
             bloque()
         } catch (e: HttpException) {
             val mensaje = when (e.code()) {
                 400 -> "El servidor rechazó los datos (400). Revisa los campos."
                 401 -> "Credenciales del catálogo requeridas o incorrectas (401)."
                 403 -> "La cuenta del servidor no tiene permiso administrativo (403)."
-                404 -> "El producto ya no está disponible (404)."
+                404 -> noEncontrado
                 else -> "El servidor respondió con HTTP ${e.code()}."
             }
             throw IllegalStateException(mensaje, e)

@@ -43,14 +43,28 @@ internal fun OpcionContenido(texto: String, activo: Boolean, habilitado: Boolean
     }
 }
 
+@Composable
+internal fun AccesoCatalogo(cargando: Boolean, conectar: (String, String) -> Unit) {
+    var usuario by remember { mutableStateOf("") }
+    var clave by remember { mutableStateOf("") }
+    Text("Ingresa la cuenta administrativa del servidor de catálogo.")
+    CampoContenido("Usuario del servidor", usuario, habilitado = !cargando) { usuario = it }
+    OutlinedTextField(value = clave, onValueChange = { clave = it }, label = { Text("Contraseña del servidor") },
+        enabled = !cargando, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
+    LouPrimaryButton("Conectar al catálogo", {
+        conectar(usuario.trim(), clave)
+        clave = ""
+    }, enabled = !cargando && usuario.isNotBlank() && ':' !in usuario && clave.isNotEmpty())
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdminProductosScreen(vm: AdminProductosViewModel, onVolver: () -> Unit) {
     val estado by vm.estado.collectAsState()
     val contexto = LocalContext.current.applicationContext
     var desactivar by remember { mutableStateOf<Producto?>(null) }
-    var usuario by remember { mutableStateOf("") }
-    var clave by remember { mutableStateOf("") }
     val selector = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { vm.importar(contexto, it) } }
     BackHandler(estado.editando) { if(!estado.guardando) vm.cancelar() }
     AdminPage(if(estado.editando) "Editar producto" else "Administrar productos",
@@ -61,16 +75,7 @@ fun AdminProductosScreen(vm: AdminProductosViewModel, onVolver: () -> Unit) {
         if(estado.cargando) CircularProgressIndicator()
         if (vm.usaServidor && !estado.conectado) {
             if (vm.permiteAdministracion) {
-                Text("Ingresa la cuenta administrativa del servidor de catálogo.")
-                CampoContenido("Usuario del servidor", usuario, habilitado = !estado.cargando) { usuario = it }
-                OutlinedTextField(value = clave, onValueChange = { clave = it }, label = { Text("Contraseña del servidor") },
-                    enabled = !estado.cargando, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-                LouPrimaryButton("Conectar al catálogo", {
-                    vm.conectar(usuario.trim(), clave)
-                    clave = ""
-                }, enabled = !estado.cargando && usuario.isNotBlank() && ':' !in usuario && clave.isNotEmpty())
+                AccesoCatalogo(estado.cargando, vm::conectar)
                 if (estado.error != null) TextButton(onClick = vm::cargar, enabled = !estado.cargando) { Text("Reintentar") }
             } else Text("Configura la URL HTTPS de administración para conectar al servidor.")
         } else if(estado.editando) {

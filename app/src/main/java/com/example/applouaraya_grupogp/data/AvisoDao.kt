@@ -16,6 +16,6 @@ interface AvisoDao {
     // Una publicación genera como máximo un aviso por cliente. Editar o republicar no duplica.
     @Query("""INSERT OR IGNORE INTO avisos (usuarioId,tipo,titulo,mensaje,referenciaId,claveEvento,creadaEn,leida)
         SELECT id,'CAMPANIA','Campaña publicada','Hay una campaña publicada para consultar.',:campania,
-        'campania:' || :campania,:ahora,0 FROM usuarios WHERE rol='CLIENTE'""")
-    suspend fun campaniaPublicada(campania: Long, ahora: Long)
+        :prefijo || :campania,:ahora,0 FROM usuarios WHERE rol='CLIENTE'""")
+    suspend fun campaniaPublicada(campania: Long, ahora: Long, prefijo: String = "campania:")
 }

@@ -46,13 +46,13 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
             ProductosRepository(db, remoto) { sesionVm.estado.value.usuarioId }
         }
     }
-    val contenidoRepo = remember(db, productosRepo) { ContenidoRepository(db, productosRepo) }
+    val contenidoRepo = remember(db, catalogoRepo) { ContenidoRepository(db, catalogoRepo) }
     val sesion by sesionVm.estado.collectAsState()
     val preferenciasRepo = remember(contexto, preferenciasPrueba) {
         preferenciasPrueba ?: PreferenciasRepository(contexto.getSharedPreferences("lou_preferencias", Context.MODE_PRIVATE))
     }
     val avisosFactory = remember(db, sesionVm, preferenciasRepo) { viewModelFactory {
-        initializer { AvisosViewModel(AvisosRepository(db) { sesionVm.estado.value.usuarioId }, preferenciasRepo, sesionVm.estado) }
+        initializer { AvisosViewModel(AvisosRepository(db, contenidoRepo.remoto?.let { it::comprobarCampania }) { sesionVm.estado.value.usuarioId }, preferenciasRepo, sesionVm.estado) }
     } }
     val avisosVm: AvisosViewModel = viewModel(factory = avisosFactory)
     val avisosActuales by avisosVm.estado.collectAsState()
@@ -222,14 +222,22 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
                 } }
                 composable("admin/contenido") { RutaPrivada("admin/contenido", sesion) {
                     val factory = remember(contenidoRepo) { viewModelFactory { initializer { AdminContenidoViewModel(contenidoRepo) } } }
-                    val vm: AdminContenidoViewModel = viewModel(factory = factory)
+                    val vm: AdminContenidoViewModel = viewModel(key = "admin-contenido-${sesion.usuarioId}", factory = factory)
                     AdminContenidoScreen(vm, onVolver = { nav.popBackStack() })
+                } }
+                composable("novedades-locales") { RutaPrivada("novedades-locales", sesion) {
+                    val factory = remember(productosRepo) { viewModelFactory { initializer { NovedadesViewModel(ContenidoRepository(db, productosRepo)) } } }
+                    NovedadesScreen(viewModel(factory = factory), onVolver = { nav.popBackStack() }, onProducto = { abrir("producto/$it") })
                 } }
                 composable("novedades") { RutaPrivada("novedades", sesion) {
                     val factory = remember(contenidoRepo) { viewModelFactory { initializer { NovedadesViewModel(contenidoRepo) } } }
                     val vm: NovedadesViewModel = viewModel(factory = factory)
-                    NovedadesScreen(vm, onVolver = { nav.popBackStack() }, onProducto = { abrir("producto/$it") })
+                    NovedadesScreen(vm, onVolver = { nav.popBackStack() }, onProducto = { abrir("producto-coleccion/$it") })
                 } }
+                composable("producto-coleccion/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
+                    RutaPrivada("producto-coleccion/{id}", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id,
+                        repositorio = catalogoRepo, productoInicial = e.arguments?.getInt("id"), repositorioFavoritos = favoritosPrueba) }
+                }
                 composable("producto/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
                     RutaPrivada("producto/{id}", sesion) { id -> CatalogoScreen(onVolver = { nav.popBackStack() }, usuarioId = id,
                         repositorio = productosRepo, productoInicial = e.arguments?.getInt("id"), repositorioFavoritos = favoritosPrueba) }

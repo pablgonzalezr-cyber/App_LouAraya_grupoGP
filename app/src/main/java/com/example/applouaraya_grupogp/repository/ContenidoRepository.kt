@@ -12,10 +12,28 @@ data class ContenidoAdminDatos(val colecciones: List<ColeccionEntity>, val miemb
 data class ContenidoClienteDatos(val colecciones: List<ColeccionVista>, val campanias: List<CampaniaEntity>)
 
 class ContenidoRepository(private val db: AppDatabase, private val productos: ProductosRepository) {
-    fun observarCliente(hoy: LocalDate = LocalDate.now()) = combine(db.contenidoDao().coleccionesPublicadas(),
+    internal val remoto = productos.remoto?.let(::ContenidoRemoto)
+    val permiteAdministracion get() = productos.remoto?.permiteAdministracion == true
+    internal suspend fun exigirAdministrador() = productos.exigirAdministrador()
+
+    fun observarCliente(hoy: LocalDate = LocalDate.now()) = remoto?.observarCliente() ?: combine(db.contenidoDao().coleccionesPublicadas(),
         db.contenidoDao().miembrosPublicados(), db.contenidoDao().campaniasVigentes(hoy.toString())) { colecciones, miembros, campanias ->
         ContenidoClienteDatos(colecciones.map { c -> ColeccionVista(c, miembros.filter { it.coleccionId == c.id }.map { it.producto }) }, campanias)
     }
+    internal suspend fun administracionRemota(cuenta: String): ContenidoAdminDatos {
+        val actor = exigirAdministrador()
+        val datos = checkNotNull(remoto).administracion(cuenta)
+        check(exigirAdministrador() == actor) { "La sesión cambió" }
+        return datos
+    }
+
+    internal suspend fun avisarPublicacion(c: CampaniaEntity) {
+        val hoy = LocalDate.now(java.time.ZoneId.of("America/Santiago")).toString()
+        if (c.activa && c.publicada && c.termino >= hoy) {
+            db.avisoDao().campaniaPublicada(c.id, System.currentTimeMillis(), "campania-remota:")
+        }
+    }
+
     fun observarAdministracion() = flow {
         val id=productos.exigirAdministrador()
         productos.inicializar()

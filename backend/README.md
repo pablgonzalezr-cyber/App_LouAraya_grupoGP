@@ -292,10 +292,16 @@ En otra terminal, compila debug con `-PlouCatalogoUrl=https://127.0.0.1:8095/` y
 
 Retrofit obtiene la lista publicada y el detalle público. En administración, cada mutación confirmada vuelve a consultar el listado administrativo e invalida las consultas públicas activas. El catálogo también se actualiza al volver a la pantalla y admite actualización manual.
 
-Los ocho IDs de muestra comparten las fotografías y favoritos históricos. Para el resto, los favoritos remotos usan claves distintas de los productos locales. Los favoritos anteriores siguen accesibles desde **Ver favoritos locales**. QR, colecciones y campañas conservan su flujo local. Las fotos elegidas en el panel se conservan en el dispositivo y se asocian al ID remoto después de que Spring confirma el guardado. El contrato no incluye campos de imagen ni subida de archivos.
+Los ocho IDs de muestra comparten las fotografías y favoritos históricos. Para el resto, los favoritos remotos usan claves distintas de los productos locales. Los favoritos anteriores siguen accesibles desde **Ver favoritos locales**. QR conserva su flujo local. Las nuevas colecciones y campañas se administran desde Spring. Los avisos de campañas anteriores conservan el acceso al contenido local. Las fotos elegidas en el panel se conservan en el dispositivo y se asocian al ID remoto después de que Spring confirma el guardado. El contrato no incluye campos de imagen ni subida de archivos.
 
 El contrato de red lleva IDs `Long` y valores `BigDecimal`. Android comprueba el rango del ID antes de adaptarlo a `Int`. El formulario remoto conserva los decimales del servidor. Las tarjetas y la ficha reutilizan la presentación entera de Android.
 
+### Colecciones y campañas en Android
+
+En **Colecciones y campañas**, el administrador introduce su cuenta de Spring y puede asociar productos, configurar fechas, publicar, ocultar o desactivar contenido. Para reactivar un registro, abre **Editar**, activa **Activa** y guarda. Android envía las fechas en formato ISO y las presenta como día/mes/año. La vigencia pública la decide el servidor en la zona `America/Santiago`, incluidos los dos extremos del periodo.
+
+Desde el inicio de cliente, abre **Colecciones y campañas** y pulsa **Actualizar**. Una colección pública muestra los productos que devuelve Spring. Al tocar un diseño se abre su ficha remota.
+
 ### Prueba de integración
 
-`ProductosRetrofitTest` activa el recorrido completo cuando se define `LOU_PRUEBA_RETROFIT_URL`. Úsalo únicamente con una instancia desechable con H2 en memoria, datos iniciales y TLS. Define también `LOU_PRUEBA_RETROFIT_TRUSTSTORE`, `LOU_PRUEBA_RETROFIT_TRUSTSTORE_CLAVE`, `LOU_ADMIN_USUARIO` y `LOU_ADMIN_CLAVE` en la terminal de prueba. Ejecuta `.\gradlew.bat :app:testDebugUnitTest --rerun --tests "*ProductosRetrofitTest"`. La prueba crea, edita, oculta, republica y archiva un producto de prueba.
+`ProductosRetrofitTest` activa el recorrido completo cuando se define `LOU_PRUEBA_RETROFIT_URL`. Úsalo únicamente con una instancia desechable con H2 en memoria, datos iniciales y TLS. Define también `LOU_PRUEBA_RETROFIT_TRUSTSTORE`, `LOU_PRUEBA_RETROFIT_TRUSTSTORE_CLAVE`, `LOU_ADMIN_USUARIO` y `LOU_ADMIN_CLAVE` en la terminal de prueba. Ejecuta `.\gradlew.bat :app:testDebugUnitTest --rerun --tests "*ProductosRetrofitTest"`. La prueba crea, edita, oculta, republica y archiva un producto de prueba. Con el mismo entorno, ejecuta el filtro `--tests "*ContenidoRetrofitTest"` para las relaciones de colección, los estados de publicación, la reactivación y las fechas de campaña.

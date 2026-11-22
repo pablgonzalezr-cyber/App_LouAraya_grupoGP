@@ -33,10 +33,11 @@ fun NovedadesScreen(vm:NovedadesViewModel,onVolver:()->Unit,onProducto:(Int)->Un
         LouBackButton(onClick = { if(coleccionId!=null) coleccionId=null else onVolver() })
         LouPageHeading("Colecciones y campañas", "Ideas y colecciones de temporada")
         if(estado.cargando)CircularProgressIndicator()
+        if (!estado.cargando && estado.error == null) TextButton(onClick = vm::cargar) { Text("Actualizar") }
         estado.error?.let{Text(it,color=MaterialTheme.colorScheme.error);TextButton(onClick=vm::cargar){Text("Reintentar")}}
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(12.dp)){
             if(coleccionId==null){
-                if(!estado.cargando && estado.datos.campanias.isEmpty() && estado.datos.colecciones.isEmpty())item{Text("Pronto tendremos nuevas colecciones y campañas para ti.")}
+                if(!estado.cargando && estado.error == null && estado.datos.campanias.isEmpty() && estado.datos.colecciones.isEmpty())item{Text("Pronto tendremos nuevas colecciones y campañas para ti.")}
                 items(estado.datos.campanias,key={"campania-${it.id}"}){c->Card(colors=CardDefaults.cardColors(containerColor=LouColors.ArenaClara)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                     Text(c.titulo,style=MaterialTheme.typography.titleLarge,color=Color(0xFF51362B));Text(c.descripcion)
                     Text("${ContenidoValidator.mostrarFecha(c.inicio)} al ${ContenidoValidator.mostrarFecha(c.termino)}",style=MaterialTheme.typography.bodySmall)

@@ -21,7 +21,8 @@ object PoliticaAvisos {
     }
 }
 
-class AvisosRepository(private val db: AppDatabase, private val sesion: () -> Long?) {
+class AvisosRepository(private val db: AppDatabase, private val comprobarCampaniaRemota: (suspend (Long) -> Unit)? = null,
+                       private val sesion: () -> Long?) {
     private fun actor() = sesion()?.takeIf { it > 0 } ?: throw SecurityException("Inicia sesión para consultar avisos")
     fun observar() = actor().let { id ->
         combine(db.usuarioDao().observarPorId(id), db.avisoDao().observar(id)) { usuario, avisos ->
@@ -34,25 +35,32 @@ class AvisosRepository(private val db: AppDatabase, private val sesion: () -> Lo
         val usuario = actor()
         check(db.avisoDao().marcarLeida(usuario, id) == 1) { "Aviso no disponible para esta cuenta" }
     }
-    suspend fun destino(id: Long): String = db.withTransaction {
-        val usuario = actor()
-        val rol = db.usuarioDao().buscarPorId(usuario)?.rol ?: throw SecurityException("Cuenta no disponible")
-        val aviso = db.avisoDao().buscar(usuario, id) ?: throw SecurityException("Aviso no disponible para esta cuenta")
-        val ruta = PoliticaAvisos.ruta(aviso.tipo, rol, aviso.referenciaId)
-            ?: throw SecurityException("No tienes permiso para abrir este contenido")
-        when (aviso.tipo) {
-            "ESTADO" -> check(db.cotizacionDao().buscarPorId(aviso.referenciaId)?.usuarioId == usuario) { "Solicitud no disponible" }
-            "NUEVA_SOLICITUD" -> check(db.cotizacionDao().buscarPorId(aviso.referenciaId) != null) { "Solicitud no disponible" }
-            "CAMPANIA" -> {
-                val campania = db.contenidoDao().buscarCampania(aviso.referenciaId)
-                val hoy = LocalDate.now().toString()
-                check(campania != null && campania.activa && campania.publicada && hoy >= campania.inicio && hoy <= campania.termino) {
-                    "Esta campaña todavía no está vigente o ya no está publicada. El aviso se conserva como historial."
+    suspend fun destino(id: Long): String {
+        val actorInicial = actor()
+        val avisoInicial = db.avisoDao().buscar(actorInicial, id) ?: throw SecurityException("Aviso no disponible para esta cuenta")
+        val remoto = avisoInicial.claveEvento.startsWith("campania-remota:")
+        if (remoto) checkNotNull(comprobarCampaniaRemota)(avisoInicial.referenciaId)
+        return db.withTransaction {
+            val usuario = actor()
+            check(usuario == actorInicial) { "La sesión cambió" }
+            val rol = db.usuarioDao().buscarPorId(usuario)?.rol ?: throw SecurityException("Cuenta no disponible")
+            val aviso = db.avisoDao().buscar(usuario, id) ?: throw SecurityException("Aviso no disponible para esta cuenta")
+            val ruta = PoliticaAvisos.ruta(aviso.tipo, rol, aviso.referenciaId)
+                ?: throw SecurityException("No tienes permiso para abrir este contenido")
+            when (aviso.tipo) {
+                "ESTADO" -> check(db.cotizacionDao().buscarPorId(aviso.referenciaId)?.usuarioId == usuario) { "Solicitud no disponible" }
+                "NUEVA_SOLICITUD" -> check(db.cotizacionDao().buscarPorId(aviso.referenciaId) != null) { "Solicitud no disponible" }
+                "CAMPANIA" -> if (!remoto) {
+                    val campania = db.contenidoDao().buscarCampania(aviso.referenciaId)
+                    val hoy = LocalDate.now().toString()
+                    check(campania != null && campania.activa && campania.publicada && hoy >= campania.inicio && hoy <= campania.termino) {
+                        "Esta campaña todavía no está vigente o ya no está publicada. El aviso se conserva como historial."
+                    }
                 }
             }
+            check(sesion() == usuario) { "La sesión cambió" }
+            db.avisoDao().marcarLeida(usuario, id)
+            if (!remoto && aviso.tipo == "CAMPANIA" && comprobarCampaniaRemota != null) "novedades-locales" else ruta
         }
-        check(sesion() == usuario) { "La sesión cambió" }
-        db.avisoDao().marcarLeida(usuario, id)
-        ruta
     }
 }

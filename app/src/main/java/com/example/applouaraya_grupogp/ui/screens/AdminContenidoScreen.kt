@@ -19,11 +19,14 @@ fun AdminContenidoScreen(vm:AdminContenidoViewModel,onVolver:()->Unit){
     var desactivar by remember { mutableStateOf<Pair<Long,Boolean>?>(null) }
     BackHandler(estado.editando){if(!estado.guardando)vm.cancelar()}
     AdminPage(if(estado.campanias) "Administrar campañas" else "Administrar colecciones",
-        { if(estado.editando) vm.cancelar() else onVolver() }, scroll = estado.editando, habilitado = !estado.guardando) {
+        { if(estado.editando) vm.cancelar() else onVolver() }, scroll = estado.editando || (vm.usaServidor && !estado.conectado), habilitado = !estado.guardando) {
         estado.error?.let{Text(it,color=MaterialTheme.colorScheme.error);if(!estado.editando)TextButton(onClick=vm::cargar){Text("Reintentar")}}
         estado.mensaje?.let{Text(it,color=Color(0xFF38684E))}
         if(estado.cargando)CircularProgressIndicator()
-        if(estado.editando){
+        if (vm.usaServidor && !estado.conectado) {
+            if (vm.permiteAdministracion) AccesoCatalogo(estado.cargando, vm::conectar)
+            else Text("Configura la URL HTTPS de administración para conectar al servidor.")
+        } else if(estado.editando){
             val habilitado=!estado.guardando
             LouPanel(Modifier.fillMaxWidth()){
                 if(estado.campanias){
@@ -44,6 +47,12 @@ fun AdminContenidoScreen(vm:AdminContenidoViewModel,onVolver:()->Unit){
                     Text("Productos de la colección",style=MaterialTheme.typography.titleMedium)
                     Text("Los productos desactivados se conservan asociados, pero no se muestran al cliente.",style=MaterialTheme.typography.bodySmall)
                     estado.errores["productos"]?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+                    val ausentes = f.productos - estado.datos.productos.map { it.id }.toSet()
+                    ausentes.forEach { id ->
+                        TextButton(onClick = { vm.cambiar(f.copy(productos = f.productos - id)) }, enabled = habilitado) {
+                            Text("Quitar producto archivado #$id")
+                        }
+                    }
                     estado.datos.productos.forEach{p->
                         Row(Modifier.fillMaxWidth().testTag("coleccion-producto-${p.id}")){
                             Checkbox(checked=p.id in f.productos,enabled=habilitado,onCheckedChange={seleccionado->vm.cambiar(f.copy(productos=if(seleccionado)f.productos+p.id else f.productos-p.id))})
@@ -54,22 +63,29 @@ fun AdminContenidoScreen(vm:AdminContenidoViewModel,onVolver:()->Unit){
                 LouPrimaryButton(if(estado.guardando) "Guardando…" else "Guardar cambios", vm::guardar, Modifier.fillMaxWidth(), habilitado)
             }
         }else{
+            val disponible = !estado.guardando && !estado.cargando
+            if (vm.usaServidor) Row {
+                TextButton(onClick = vm::cargar, enabled = disponible) { Text("Actualizar") }
+                TextButton(onClick = vm::desconectar, enabled = disponible) { Text("Cambiar cuenta") }
+            }
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 FilterChip(selected=!estado.campanias,onClick={vm.seccion(false)},enabled=!estado.guardando,label={Text("Colecciones")})
                 FilterChip(selected=estado.campanias,onClick={vm.seccion(true)},enabled=!estado.guardando,label={Text("Campañas")})
             }
-            LouPrimaryButton(if(estado.campanias) "Crear campaña" else "Crear colección", vm::nueva, enabled = !estado.guardando)
+            LouPrimaryButton(if(estado.campanias) "Crear campaña" else "Crear colección", vm::nueva, enabled = disponible)
             if (estado.campanias) {
                 if(estado.datos.campanias.isEmpty()) Text("No hay campañas todavía.")
                 AdminGrid(estado.datos.campanias, { it.id }, Modifier.weight(1f)) { c ->
-                    AdminCampaniaCard(c, !estado.guardando, { vm.editar(c) }, { desactivar = c.id to true })
+                    AdminCampaniaCard(c, disponible, { vm.editar(c) }, { desactivar = c.id to true },
+                        if (vm.usaServidor) ({ vm.publicar(c.id, true, !c.publicada) }) else null)
                 }
             } else {
                 if(estado.datos.colecciones.isEmpty()) Text("No hay colecciones todavía.")
                 AdminGrid(estado.datos.colecciones, { it.id }, Modifier.weight(1f)) { c ->
                     val ids = estado.datos.miembros.filter { it.coleccionId == c.id }.map { it.productoId }.toSet()
-                    AdminColeccionCard(c, estado.datos.productos.filter { it.id in ids }, ids.size, !estado.guardando,
-                        { vm.editar(c) }, { desactivar = c.id to false })
+                    AdminColeccionCard(c, estado.datos.productos.filter { it.id in ids }, ids.size, disponible,
+                        { vm.editar(c) }, { desactivar = c.id to false },
+                        if (vm.usaServidor) ({ vm.publicar(c.id, false, !c.publicada) }) else null)
                 }
             }
         }
@@ -81,7 +97,7 @@ fun AdminContenidoScreen(vm:AdminContenidoViewModel,onVolver:()->Unit){
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdminColeccionCard(c: ColeccionEntity, productos: List<Producto>, total: Int,
-    habilitado: Boolean, editar: () -> Unit, desactivar: () -> Unit) {
+    habilitado: Boolean, editar: () -> Unit, desactivar: () -> Unit, publicar: (() -> Unit)? = null) {
     LouPanel(Modifier.fillMaxWidth()) {
         productos.firstOrNull { it.imagenNombre.isNotBlank() || it.imagenArchivo.isNotBlank() }?.let {
             ImagenProducto(it, Modifier.fillMaxWidth().aspectRatio(1f))
@@ -94,13 +110,13 @@ fun AdminColeccionCard(c: ColeccionEntity, productos: List<Producto>, total: Int
             AdminStatus(if(c.activa) "Activa" else "Desactivada")
         }
         Text("$total productos asociados", color = LouColors.TextoSecundario)
-        AdminContenidoAcciones(habilitado, c.activa, editar, desactivar)
+        AdminContenidoAcciones(habilitado, c.activa, editar, desactivar, c.publicada, publicar)
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AdminCampaniaCard(c: CampaniaEntity, habilitado: Boolean, editar: () -> Unit, desactivar: () -> Unit) {
+fun AdminCampaniaCard(c: CampaniaEntity, habilitado: Boolean, editar: () -> Unit, desactivar: () -> Unit, publicar: (() -> Unit)? = null) {
     LouPanel(Modifier.fillMaxWidth()) {
         LouEyebrow("Campaña")
         Text(c.titulo, style = MaterialTheme.typography.titleLarge, color = LouColors.Cafe)
@@ -114,7 +130,7 @@ fun AdminCampaniaCard(c: CampaniaEntity, habilitado: Boolean, editar: () -> Unit
             AdminStatus(if(c.activa) "Activa" else "Desactivada")
             if(c.activa && c.publicada) {
                 val periodo = runCatching {
-                    val hoy = java.time.LocalDate.now()
+                    val hoy = java.time.LocalDate.now(java.time.ZoneId.of("America/Santiago"))
                     when {
                         hoy < java.time.LocalDate.parse(c.inicio) -> "Programada"
                         hoy > java.time.LocalDate.parse(c.termino) -> "Finalizada"
@@ -124,14 +140,17 @@ fun AdminCampaniaCard(c: CampaniaEntity, habilitado: Boolean, editar: () -> Unit
                 periodo?.let { AdminStatus(it) }
             }
         }
-        AdminContenidoAcciones(habilitado, c.activa, editar, desactivar)
+        AdminContenidoAcciones(habilitado, c.activa, editar, desactivar, c.publicada, publicar)
     }
 }
 
 @Composable
-private fun AdminContenidoAcciones(habilitado: Boolean, activa: Boolean, editar: () -> Unit, desactivar: () -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+@OptIn(ExperimentalLayoutApi::class)
+private fun AdminContenidoAcciones(habilitado: Boolean, activa: Boolean, editar: () -> Unit, desactivar: () -> Unit,
+                                  publicada: Boolean, publicar: (() -> Unit)?) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = editar, enabled = habilitado) { Text("Editar") }
+        if (publicar != null) TextButton(onClick = publicar, enabled = habilitado) { Text(if (publicada) "Ocultar" else "Publicar") }
         if(activa) TextButton(onClick = desactivar, enabled = habilitado) { Text("Desactivar") }
     }
 }
