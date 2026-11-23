@@ -56,9 +56,10 @@ class AdminCotizacionesTest {
     @Test void administradorListaFiltraYConsulta() throws Exception {
         long id = crear();
         mvc.perform(get("/api/admin/cotizaciones").with(httpBasic(ADMIN, ADMIN_CLAVE)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(3)));
         mvc.perform(get("/api/admin/cotizaciones?estado=PENDIENTE").with(httpBasic(ADMIN, ADMIN_CLAVE)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[*].estado", org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("PENDIENTE"))));
         mvc.perform(get("/api/admin/cotizaciones/" + id).with(httpBasic(ADMIN, ADMIN_CLAVE)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id));
     }

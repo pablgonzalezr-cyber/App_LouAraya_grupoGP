@@ -22,6 +22,9 @@ import java.time.ZoneId;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -49,7 +52,7 @@ class ContenidoApiTest {
         String publica = COLECCIONES + "/" + id;
         mvc.perform(get(admin).with(admin())).andExpect(status().isOk())
             .andExpect(jsonPath("$.nombre").value("Tapices")).andExpect(jsonPath("$.productos").value(contains(1, 2)));
-        mvc.perform(get(ADMIN_COLECCIONES).with(admin())).andExpect(jsonPath("$[0].id").value(id));
+        mvc.perform(get(ADMIN_COLECCIONES).with(admin())).andExpect(jsonPath("$[*].id").value(hasItem((int) id)));
         mvc.perform(get(publica)).andExpect(status().isNotFound());
 
         var actualizada = new ColeccionRequest("Tapices de pared", "Selección de tejidos de algodón", true, true, Set.of(2L, 6L));
@@ -59,11 +62,11 @@ class ContenidoApiTest {
         mvc.perform(get(publica)).andExpect(status().isOk())
             .andExpect(jsonPath("$.productos[*].id").value(contains(2, 6)))
             .andExpect(jsonPath("$.productos[1].disponible").value(false));
-        mvc.perform(get(COLECCIONES)).andExpect(jsonPath("$[0].id").value(id));
+        mvc.perform(get(COLECCIONES)).andExpect(jsonPath("$[*].id").value(hasItem((int) id)));
 
         mvc.perform(delete(admin).with(admin())).andExpect(status().isNoContent()).andExpect(content().string(""));
         mvc.perform(get(publica)).andExpect(status().isNotFound());
-        mvc.perform(get(COLECCIONES)).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get(COLECCIONES)).andExpect(jsonPath("$[*].id").value(not(hasItem((int) id))));
         mvc.perform(get(admin).with(admin())).andExpect(status().isOk())
             .andExpect(jsonPath("$.activa").value(false)).andExpect(jsonPath("$.productos").value(contains(2, 6)));
         mvc.perform(get("/api/productos/1")).andExpect(status().isOk());
@@ -112,7 +115,7 @@ class ContenidoApiTest {
             .andExpect(status().isBadRequest());
         mvc.perform(get(ADMIN_COLECCIONES + "/" + id).with(admin()))
             .andExpect(jsonPath("$.productos.length()").value(0));
-        assertEquals(0, jdbc.queryForObject("select count(*) from coleccion_productos", Integer.class));
+        assertEquals(0, jdbc.queryForObject("select count(*) from coleccion_productos where coleccion_id = ?", Integer.class, id));
         mvc.perform(get(COLECCIONES + "/no-numero")).andExpect(status().isBadRequest());
         mvc.perform(get(ADMIN_COLECCIONES + "/0").with(admin())).andExpect(status().isBadRequest());
         mvc.perform(delete(ADMIN_COLECCIONES + "/999999").with(admin())).andExpect(status().isNotFound());
@@ -134,11 +137,11 @@ class ContenidoApiTest {
         long futura = crearCampania(campania(hoy.plusDays(1), hoy.plusDays(2), true, true));
         long vencida = crearCampania(campania(hoy.minusDays(2), hoy.minusDays(1), true, true));
         long inactiva = crearCampania(campania(hoy, hoy, true, false));
-        mvc.perform(get(CAMPANIAS)).andExpect(jsonPath("$[*].id").value(contains((int) id)));
+        mvc.perform(get(CAMPANIAS)).andExpect(jsonPath("$[*].id").value(containsInAnyOrder(1, (int) id)));
         for (long oculta : new long[]{futura, vencida, inactiva}) {
             mvc.perform(get(CAMPANIAS + "/" + oculta)).andExpect(status().isNotFound());
         }
-        mvc.perform(get(ADMIN_CAMPANIAS).with(admin())).andExpect(jsonPath("$.length()").value(4));
+        mvc.perform(get(ADMIN_CAMPANIAS).with(admin())).andExpect(jsonPath("$.length()").value(5));
 
         mvc.perform(put(admin).with(admin()).contentType(MediaType.APPLICATION_JSON)
             .content(json(new CampaniaRequest("Edición de temporada", "Piezas tejidas a mano", hoy.minusDays(1), hoy, true, true))))

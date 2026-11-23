@@ -1,13 +1,13 @@
 package cl.louaraya.backend;
 
-import cl.louaraya.backend.config.DatosIniciales;
 import cl.louaraya.backend.dto.ProductoRequest;
 import cl.louaraya.backend.repository.ProductoRepository;
 import cl.louaraya.backend.service.ProductoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -32,7 +32,6 @@ class ProductoApiTest {
     @Autowired ObjectMapper mapper;
     @Autowired ProductoRepository repo;
     @Autowired ProductoService service;
-    @Autowired DatosIniciales iniciales;
     @Autowired DataSource datasource;
     private static final String ADMIN = "/api/admin/productos";
     private ProductoRequest valido() {
@@ -62,7 +61,9 @@ class ProductoApiTest {
         mvc.perform(put(ADMIN + "/1").with(httpBasic("admin-test", "SoloPruebas123!"))
             .contentType(MediaType.APPLICATION_JSON).content(json(valido())))
             .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(1)).andExpect(jsonPath("$.precio").value(20000));
-        iniciales.run(new DefaultApplicationArguments()); iniciales.run(new DefaultApplicationArguments());
+        try (var conexion = datasource.getConnection()) {
+            ScriptUtils.executeSqlScript(conexion, new ClassPathResource("data.sql"));
+        }
         assertEquals(8, repo.count());
         assertEquals(0, new BigDecimal("20000").compareTo(repo.findById(1L).orElseThrow().getPrecio()));
     }

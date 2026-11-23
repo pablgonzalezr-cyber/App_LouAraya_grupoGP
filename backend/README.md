@@ -132,9 +132,9 @@ Los cambios manuales en desarrollo quedan en `backend/data/lou-araya.mv.db`. **N
 
 Este microservicio es dueño de la tabla `productos` y de su secuencia de IDs. El futuro microservicio de cotizaciones deberá ejecutarse en otro puerto y tener su propia base de datos, con un archivo distinto si también usa H2. El perfil `test` usa una base H2 en memoria separada y la verificación HTTP crea su propio archivo bajo `backend/verification/`.
 
-H2 de desarrollo: `jdbc:h2:file:./data/lou-araya;DB_CLOSE_ON_EXIT=FALSE`. Hibernate usa `ddl-auto=update` para esta etapa académica. No hay `create-drop` en desarrollo. Los ocho productos se copiaron de ProductosDemo.kt conservando nombres, descripciones, medidas, precios, disponibilidad e IDs 1–8. El INSERT inicial solo actúa si falta ese ID; no sobrescribe un producto existente. Una secuencia independiente comienza en 9, evitando colisionar con los IDs reservados y conservando su avance en disco.
+El arranque crea las tablas en `jdbc:h2:file:./data/lou-araya;DB_CLOSE_ON_EXIT=FALSE` mediante `src/main/resources/schema.sql`. Spring ejecuta después `data.sql` y Hibernate comprueba el esquema con `ddl-auto=validate`.
 
-Al actualizar una base existente, Hibernate agrega `archivado` con valor predeterminado `false`. La carga inicial comprueba la existencia del ID en la tabla, por lo que una semilla archivada permanece archivada tras reiniciar.
+Si las tablas están vacías, se insertan los ocho productos originales (IDs 1–8), una colección publicada con los productos 1 y 3 y una campaña vigente hasta 30 días después del primer arranque. La secuencia de productos nuevos empieza en 9. Al reiniciar se conservan los cambios de precio, publicación, archivo y asociaciones.
 
 Las fotografías y sus nombres de recurso Android no se migran: este backend no sirve ni sube imágenes. Tampoco copia ediciones del Room del Samsung. Es un catálogo independiente.
 
@@ -203,6 +203,8 @@ backend/
   Verify-Backend.ps1
   README.md
   src/main/resources/application.properties
+  src/main/resources/schema.sql
+  src/main/resources/data.sql
   src/main/java/cl/louaraya/backend/
     BackendApplication.java
     controller/ProductoController.java
@@ -214,7 +216,6 @@ backend/
     dto/PublicacionRequest.java
     config/SecurityConfig.java
     config/OpenApiConfig.java
-    config/DatosIniciales.java
     exception/ApiExceptionHandler.java
     exception/ProductoNoEncontrado.java
   src/test/resources/application-test.properties
@@ -248,7 +249,7 @@ El POM incluye Spring Web, Data JPA, Bean Validation, Security, H2, Spring Boot 
 - Scripts bloqueados por la política local y lectura ANSI de acentos: se usa PowerShell hijo con política de proceso y archivos UTF-8 BOM, sin cambiar políticas globales.
 - Mockito muestra un aviso de CDS del JDK durante pruebas; no implica fallo. springdoc advierte que Swagger está habilitado: aquí es intencional para la demostración local.
 
-No quedan fallos de compilación/pruebas pendientes. Swagger fue verificado mediante HTTP, recursos JavaScript y documento OpenAPI; el recorrido visual y las credenciales que elijas se prueban manualmente en tu navegador. H2 y `ddl-auto=update` son para demostración, no una política de migraciones de producción. No hay paginación, carga de fotografías, control optimista de ediciones simultáneas, usuarios persistidos, TLS ni conexión móvil; no se añadieron porque quedan fuera de esta etapa pequeña. Antes de cualquier exposición pública se requiere revisar esos aspectos y la versión soportada del stack.
+No quedan fallos de compilación/pruebas pendientes. Swagger fue verificado mediante HTTP, recursos JavaScript y documento OpenAPI; el recorrido visual y las credenciales que elijas se prueban manualmente en tu navegador. H2 y los scripts de inicialización son para demostración, no una política de migraciones de producción. No hay paginación, carga de fotografías, control optimista de ediciones simultáneas, usuarios persistidos, TLS ni conexión móvil; no se añadieron porque quedan fuera de esta etapa pequeña. Antes de cualquier exposición pública se requiere revisar esos aspectos y la versión soportada del stack.
 
 Sin commits, push ni merges. No se avanzó a cotizaciones, Retrofit ni otras etapas.
 

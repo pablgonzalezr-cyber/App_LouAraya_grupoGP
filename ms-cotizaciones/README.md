@@ -23,6 +23,8 @@ Swagger: http://127.0.0.1:8096/swagger-ui/index.html
 
 Salud: http://127.0.0.1:8096/api/salud
 
+Spring ejecuta `src/main/resources/schema.sql` y `data.sql` al arrancar. Hibernate valida el esquema. En una base vacía se crean un cliente de muestra y dos cotizaciones, una pendiente y otra en revisión. Para verlas, usa `GET /api/admin/cotizaciones` con la cuenta administrativa configurada en el entorno. Para probar el historial de cliente, registra tu propia cuenta. Las ediciones y los estados se conservan al reiniciar.
+
 Tests en memoria: `mvnw.cmd -B -ntp clean verify`. La base real no se toca en los tests.
 
 ## Endpoints REST
