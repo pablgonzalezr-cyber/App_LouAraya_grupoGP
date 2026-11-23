@@ -185,6 +185,15 @@ class ContenidoApiTest {
         }
     }
 
+    @Test void contenidoIncompletoDevuelveErroresDeSusCampos() throws Exception {
+        for (String endpoint : new String[]{ADMIN_COLECCIONES, ADMIN_CAMPANIAS}) {
+            mvc.perform(post(endpoint).with(admin()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.descripcion").exists())
+                .andExpect(jsonPath(endpoint.equals(ADMIN_COLECCIONES) ? "$.errores.nombre" : "$.errores.titulo").exists());
+        }
+    }
+
     @Test @WithMockUser(roles = "CLIENTE")
     void rechazaRolClienteEnHttpYServicio() throws Exception {
         assertThrows(AccessDeniedException.class, () -> colecciones.desactivar(1L));

@@ -36,8 +36,8 @@ class SolicitudesServidorTest {
         respuesta("[${dato(estado)}]")
         if (detalle) respuesta(dato(estado))
     }
-    private fun esperar(vm: SolicitudesServidorViewModel) = runBlocking {
-        withTimeout(5000) { vm.estado.first { !it.cargando } }
+    private fun esperar(vm: SolicitudesServidorViewModel, listo: (SolicitudesServidorState) -> Boolean = { true }) = runBlocking {
+        withTimeout(5000) { vm.estado.first { !it.cargando && listo(it) } }
     }
     private fun abrirAdmin(): SolicitudesServidorViewModel {
         val vm = vm(true)
@@ -104,14 +104,14 @@ class SolicitudesServidorTest {
             val vm = vm(admin)
             respuesta("{}", 401)
             vm.conectar("usuario", clave, null)
-            assertTrue(esperar(vm).error!!.contains("401"))
+            assertTrue(esperar(vm) { it.error != null }.error!!.contains("401"))
             respuesta("[]")
             carga(PENDIENTE, false)
             vm.conectar("usuario", clave, null)
             assertTrue(esperar(vm).conectada)
             respuesta("{}", 403)
             vm.actualizar(null)
-            val fin = esperar(vm)
+            val fin = esperar(vm) { it.error != null }
             assertTrue(fin.error!!.contains("403"))
             assertFalse(fin.conectada)
             assertTrue(fin.lista.isEmpty())
@@ -158,7 +158,7 @@ class SolicitudesServidorTest {
         assertEquals(PENDIENTE, esperar(vm).detalle?.estado)
         respuesta("{}", 403)
         vm.cambiar(11, PENDIENTE, EN_REVISION)
-        val denegado = esperar(vm)
+        val denegado = esperar(vm) { it.error != null }
         assertTrue(denegado.error!!.contains("403"))
         assertFalse(denegado.conectada)
         assertTrue(denegado.lista.isEmpty())

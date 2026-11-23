@@ -40,6 +40,44 @@ class RegistroYCotizacionesTest {
                 "Algodon natural", new BigDecimal("40.5"), new BigDecimal("70"), 2,
                 LocalDate.now(ZoneId.of("America/Santiago")).plusDays(5), 1L, "Tapiz mural");
     }
+
+    @Test void reintentarConUnCampoDistintoConservaLaSolicitudOriginal() throws Exception {
+        String email = registrar();
+        var original = json.<com.fasterxml.jackson.databind.node.ObjectNode>valueToTree(datos(UUID.randomUUID().toString()));
+        var respuesta = mvc.perform(post("/api/cotizaciones").with(httpBasic(email, CLAVE))
+                .contentType(MediaType.APPLICATION_JSON).content(original.toString())).andExpect(status().isCreated()).andReturn();
+        long id = json.readTree(respuesta.getResponse().getContentAsString()).get("id").asLong();
+        var cambios = json.readTree("""
+                {"descripcion":"Otro diseño para la misma casa","categoria":"Matrimonios","material":"Lino",
+                 "anchoCm":41,"largoCm":71,"cantidad":3,"fechaRequerida":null,
+                 "productoReferenciaId":2,"productoReferenciaNombre":"Otro tapiz"}
+                """);
+        var campos = cambios.fields();
+        while (campos.hasNext()) {
+            var campo = campos.next();
+            var intento = original.deepCopy();
+            intento.set(campo.getKey(), campo.getValue());
+            mvc.perform(post("/api/cotizaciones").with(httpBasic(email, CLAVE)).contentType(MediaType.APPLICATION_JSON)
+                    .content(intento.toString())).andExpect(status().isConflict());
+        }
+        mvc.perform(get("/api/cotizaciones/mias").with(httpBasic(email, CLAVE))).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(id)).andExpect(jsonPath("$[0].cantidad").value(2));
+    }
+
+    @Test void referenciasIncompletasFechasVencidasYRegistroDuplicado() throws Exception {
+        String email = registrar();
+        mvc.perform(post("/api/clientes/registro").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new RegistroClienteRequest(email, CLAVE)))).andExpect(status().isConflict());
+        var d = json.<com.fasterxml.jackson.databind.node.ObjectNode>valueToTree(datos(UUID.randomUUID().toString()));
+        for (var invalido : java.util.List.of(d.deepCopy().putNull("productoReferenciaId"),
+                d.deepCopy().putNull("productoReferenciaNombre"), d.deepCopy().put("productoReferenciaNombre", "  "),
+                d.deepCopy().put("fechaRequerida", "2000-01-01"), d.deepCopy().put("categoria","Desconocida"))) {
+            mvc.perform(post("/api/cotizaciones").with(httpBasic(email, CLAVE)).contentType(MediaType.APPLICATION_JSON)
+                    .content(invalido.toString())).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/cotizaciones/mias/0").with(httpBasic(email, CLAVE))).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/cotizaciones/mias").with(httpBasic(email, CLAVE))).andExpect(jsonPath("$", hasSize(0)));
+    }
     @Test void clienteRegistraYConsultaSuCotizacion() throws Exception {
         String email = registrar();
         CotizacionRequest d = datos(UUID.randomUUID().toString());
