@@ -74,6 +74,9 @@ class ComercialUiTest {
         runBlocking{assertEquals(setOf(1,id),favoritos.favoritoDao().observarIds(clienteId).first().toSet())}
         compose.onNodeWithText("Ver detalle").performScrollTo().performClick();esperar("Descripción modificada en tiempo real")
         runBlocking{productos.desactivar(id)}
+        esperar("El producto ya no está disponible.")
+        compose.onNodeWithText("Descripción modificada en tiempo real").assertDoesNotExist()
+        compose.onNodeWithText("← Catálogo").performClick()
         esperar("0 diseños encontrados")
         // El buscador conserva la consulta; solo debe desaparecer la tarjeta.
         compose.onNode(hasText("Producto UI nuevo") and !hasSetTextAction()).assertDoesNotExist()

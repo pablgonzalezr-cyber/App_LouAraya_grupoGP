@@ -17,7 +17,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun HistorialCotizacionesScreen(usuarioId: Long, onVolver: () -> Unit, onAbrir: (Long) -> Unit) {
+fun HistorialCotizacionesScreen(usuarioId: Long, onVolver: () -> Unit, onServidor: (() -> Unit)? = null, onAbrir: (Long) -> Unit) {
     val vm: HistorialCotizacionesViewModel = viewModel()
     var solicitudes by remember(usuarioId) { mutableStateOf<List<CotizacionEntity>>(emptyList()) }
     var cargando by remember(usuarioId) { mutableStateOf(true) }
@@ -35,6 +35,7 @@ fun HistorialCotizacionesScreen(usuarioId: Long, onVolver: () -> Unit, onAbrir: 
             LouBackButton(onVolver, "← Inicio")
             LouEyebrow("TU HISTORIAL")
             LouPageHeading("Mis solicitudes", "Historial local de tu cuenta en este dispositivo.")
+            onServidor?.let { OutlinedButton(onClick = it) { Text("Solicitudes del servidor") } }
             LouBadge("${solicitudes.size} solicitudes")
             when {
                 cargando -> CircularProgressIndicator()

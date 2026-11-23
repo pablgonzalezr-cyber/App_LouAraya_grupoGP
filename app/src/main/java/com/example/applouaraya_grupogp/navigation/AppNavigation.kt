@@ -248,8 +248,23 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
                         abrir("solicitud/$solicitudId")
                     }, mostrarAyuda = config.preferencias.mostrarAyuda)
                 } }
+                for (administrador in listOf(false, true)) {
+                    val lista = if (administrador) "admin/solicitudes-servidor" else "solicitudes-servidor"
+                    composable(lista) { entry -> RutaPrivada(lista, sesion) { local ->
+                        val vm = solicitudesServidorVm(entry, local, administrador)
+                        SolicitudesServidorScreen(vm, null, { nav.popBackStack() }, { abrir("$lista/$it") })
+                    } }
+                    val detalle = "$lista/{id}"
+                    composable(detalle, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+                        RutaPrivada(detalle, sesion) { local ->
+                            val owner = remember(entry) { nav.getBackStackEntry(lista) }
+                            val vm = solicitudesServidorVm(owner, local, administrador)
+                            SolicitudesServidorScreen(vm, entry.arguments!!.getLong("id"), { nav.popBackStack() }, {})
+                        }
+                    }
+                }
                 composable("solicitudes") { RutaPrivada("solicitudes", sesion) { id ->
-                    HistorialCotizacionesScreen(id, onVolver = { nav.popBackStack() }, onAbrir = { abrir("solicitud/$it") })
+                    HistorialCotizacionesScreen(id, onServidor = { abrir("solicitudes-servidor") }, onVolver = { nav.popBackStack() }, onAbrir = { abrir("solicitud/$it") })
                 } }
                 composable("solicitud/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
                     RutaPrivada("solicitud/{id}", sesion) { id ->
@@ -266,7 +281,7 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
                         onContenido = { abrir("admin/contenido") }, onAvisos = { abrir("avisos") }, avisosNoLeidos = avisos.noLeidas) }
                 } }
                 composable("admin/solicitudes") { RutaPrivada("admin/solicitudes", sesion) {
-                    AdminConPermiso(db, sesionVm) { vm -> AdminSolicitudesScreen(vm, onVolver = { nav.popBackStack() }, onAbrir = { abrir("admin/solicitud/$it") }) }
+                    AdminConPermiso(db, sesionVm) { vm -> AdminSolicitudesScreen(vm, onServidor = { abrir("admin/solicitudes-servidor") }, onVolver = { nav.popBackStack() }, onAbrir = { abrir("admin/solicitud/$it") }) }
                 } }
                 composable("admin/solicitud/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e ->
                     RutaPrivada("admin/solicitud/{id}", sesion) {
@@ -282,6 +297,20 @@ fun AppNavigation(basePrueba: AppDatabase? = null, preferenciasPrueba: Preferenc
             confirmButton = { TextButton(onClick = { salir(destino) }) { Text("Confirmar") } },
             dismissButton = { TextButton(onClick = { salida = null }) { Text("Cancelar") } })
     }
+}
+
+@Composable
+private fun solicitudesServidorVm(owner: androidx.navigation.NavBackStackEntry, local: Long, admin: Boolean): SolicitudesServidorViewModel {
+    val context = LocalContext.current.applicationContext
+    val factory = remember(local, admin) { viewModelFactory { initializer {
+        val prefs = context.getSharedPreferences("estados_cotizaciones_servidor", Context.MODE_PRIVATE)
+        val prefijo = "${com.example.applouaraya_grupogp.BuildConfig.COTIZACIONES_URL}|$local|"
+        SolicitudesServidorViewModel(CotizacionesRemotasRepository(), admin, SeguimientoSolicitudes(
+            { prefs.getString(prefijo + it, null) },
+            { clave, valor -> prefs.edit().putString(prefijo + clave, valor).apply() }
+        ))
+    } } }
+    return viewModel(viewModelStoreOwner = owner, key = "solicitudes-$local-$admin", factory = factory)
 }
 
 @Composable

@@ -59,10 +59,11 @@ fun AdminDashboardContent(estado: com.example.applouaraya_grupogp.viewmodel.Admi
 }
 
 @Composable
-fun AdminSolicitudesScreen(vm: AdminCotizacionesViewModel, onVolver: () -> Unit, onAbrir: (Long) -> Unit) {
+fun AdminSolicitudesScreen(vm: AdminCotizacionesViewModel, onVolver: () -> Unit, onServidor: (() -> Unit)? = null, onAbrir: (Long) -> Unit) {
     val estado by vm.estado.collectAsState()
     LaunchedEffect(vm) { vm.cargar() }
     AdminPage("Todas las solicitudes", onVolver) {
+        onServidor?.let { OutlinedButton(onClick = it) { Text("Solicitudes del servidor") } }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item { FilterChip(selected = estado.filtro == null, onClick = { vm.filtrar(null) }, label = { Text("Todas") }) }
             items(EstadoCotizacion.entries.toList()) { e -> FilterChip(selected = estado.filtro == e, onClick = { vm.filtrar(e) }, label = { Text(e.name) }) }
